@@ -1,5 +1,6 @@
 package com.example.data.model
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.squareup.moshi.Json
@@ -9,6 +10,7 @@ import com.squareup.moshi.JsonClass
 // ROOM ENTITIES (Local DB Caching)
 // ==========================================
 
+@Immutable
 @Entity(tableName = "bank_accounts")
 data class BankAccountEntity(
     @PrimaryKey val accountId: String,
@@ -26,6 +28,7 @@ data class BankAccountEntity(
     val lastUpdated: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "transactions")
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

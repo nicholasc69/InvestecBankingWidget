@@ -1,31 +1,32 @@
 package com.example.ui.dashboard
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.BankAccountEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.repository.BankRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 sealed interface DashboardUiState {
     object Loading : DashboardUiState
     data class Success(
         val accounts: List<BankAccountEntity>,
-        val selectedAccount: BankAccountEntity?,
-        val transactions: List<TransactionEntity>
+        val selectedAccount: BankAccountEntity?
     ) : DashboardUiState
     data class Error(val message: String) : DashboardUiState
 }
 
-class DashboardViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = BankRepository(application)
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    private val repository: BankRepository
+) : ViewModel() {
 
     // State properties for configuration settings
-    private val _useSandbox = MutableStateFlow(repository.useSandbox())
-    val useSandbox: StateFlow<Boolean> = _useSandbox.asStateFlow()
+    val useSandbox: StateFlow<Boolean> = repository.useSandboxFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _clientId = MutableStateFlow(repository.getClientId())
     val clientId: StateFlow<String> = _clientId.asStateFlow()
@@ -47,22 +48,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _syncMessage = MutableStateFlow<String?>(null)
     val syncMessage: StateFlow<String?> = _syncMessage.asStateFlow()
 
-    // Consolidate Room flows into cohesive dashboard UI state
+    // [OPTIMIZATION] Consolidate Room flows into cohesive dashboard UI state
     val uiState: StateFlow<DashboardUiState> = combine(
         repository.getAccountsFlow(),
         _selectedAccountId
     ) { accounts, selectId ->
         if (accounts.isEmpty()) {
-            if (_isRefreshing.value) DashboardUiState.Loading else DashboardUiState.Success(emptyList(), null, emptyList())
+            if (_isRefreshing.value) DashboardUiState.Loading else DashboardUiState.Success(emptyList(), null)
         } else {
-            // Pick selected account, falling back to first available cached account
             val activeAccount = accounts.find { it.accountId == selectId } ?: accounts.first()
             if (_selectedAccountId.value != activeAccount.accountId) {
                 _selectedAccountId.value = activeAccount.accountId
             }
-            // Combine with transaction observations
-            val txs = repository.getLastFiveTransactions(activeAccount.accountId)
-            DashboardUiState.Success(accounts, activeAccount, txs)
+            DashboardUiState.Success(accounts, activeAccount)
         }
     }.stateIn(
         scope = viewModelScope,
@@ -70,7 +68,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         initialValue = DashboardUiState.Loading
     )
 
-    // Observe transactions for selected account and automatically trigger updates inside Success state
+    // [OPTIMIZATION] Observe transactions for selected account separately to avoid nested fetches in combine
     val selectedAccountTransactions: StateFlow<List<TransactionEntity>> = _selectedAccountId
         .filterNotNull()
         .flatMapLatest { accountId ->
@@ -83,7 +81,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         )
 
     init {
-        // Automatically sync on first launch to populate demo sandbox data
         refreshData()
     }
 
@@ -106,18 +103,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun updateSettings(useSandbox: Boolean, clientId: String, secret: String, apiKey: String) {
-        repository.setUseSandbox(useSandbox)
-        repository.setClientId(clientId)
-        repository.setClientSecret(secret)
-        repository.setApiKey(apiKey)
+        viewModelScope.launch {
+            repository.setUseSandbox(useSandbox)
+            repository.setClientId(clientId)
+            repository.setClientSecret(secret)
+            repository.setApiKey(apiKey)
 
-        _useSandbox.value = useSandbox
-        _clientId.value = clientId
-        _clientSecret.value = secret
-        _apiKey.value = apiKey
+            _clientId.value = clientId
+            _clientSecret.value = secret
+            _apiKey.value = apiKey
 
-        // Retrigger sync with new configurations
-        refreshData()
+            // Retrigger sync
+            refreshData()
+        }
     }
 
     fun clearMessage() {

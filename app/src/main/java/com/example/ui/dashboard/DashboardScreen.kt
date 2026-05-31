@@ -58,17 +58,16 @@ fun DashboardScreen(
     var showSettings by remember { mutableStateOf(false) }
 
     // Professional Polish Color Palette Definitions
-    val backgroundLight = Color(0xFFF3F4F9)
-    val cardSurface = Color(0xFFFDFBFF)
-    val cardBorder = Color(0xFFC4C6D0)
-    val textPrimary = Color(0xFF1A1C1E)
-    val textSecondary = Color(0xFF44474E)
-    val textMuted = Color(0xFF74777F)
-    val accentContainer = Color(0xFFD6E3FF)
-    val accentOnContainer = Color(0xFF001B3E)
-    val dividerColor = Color(0xFFE1E2E9)
-    val greenCredit = Color(0xFF116D34)
-    val redDebit = Color(0xFFBA1A1A)
+    val backgroundLight = remember { Color(0xFFF3F4F9) }
+    val cardSurface = remember { Color(0xFFFDFBFF) }
+    val cardBorder = remember { Color(0xFFC4C6D0) }
+    val textPrimary = remember { Color(0xFF1A1C1E) }
+    val textSecondary = remember { Color(0xFF44474E) }
+    val textMuted = remember { Color(0xFF74777F) }
+    val accentContainer = remember { Color(0xFFD6E3FF) }
+    val accentOnContainer = remember { Color(0xFF001B3E) }
+    val greenCredit = remember { Color(0xFF116D34) }
+    val redDebit = remember { Color(0xFFBA1A1A) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -87,7 +86,7 @@ fun DashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(26.dp)
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(accentContainer),
                             contentAlignment = Alignment.Center
@@ -101,7 +100,7 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            "PB Investec Banking",
+                            "Investec Private Banking",
                             fontWeight = FontWeight.Bold,
                             color = textPrimary,
                             fontFamily = FontFamily.SansSerif,
@@ -687,7 +686,7 @@ fun BalanceDetailedMetricsCard(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            Divider(color = Color(0xFFE1E2E9))
+            HorizontalDivider(color = Color(0xFFE1E2E9))
             Spacer(modifier = Modifier.height(14.dp))
 
             // Sub details (Current/Ledger Balance)
@@ -722,7 +721,7 @@ fun BalanceDetailedMetricsCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFE1E2E9))
+            HorizontalDivider(color = Color(0xFFE1E2E9))
             Spacer(modifier = Modifier.height(12.dp))
 
             val timeStr = SimpleDateFormat("HH:mm:ss, dd MMM yyyy", Locale.getDefault())

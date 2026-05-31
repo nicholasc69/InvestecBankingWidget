@@ -1,23 +1,34 @@
 package com.example.data.repository
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
-import com.example.data.api.InvestecApiClient
-import com.example.data.local.BankDatabase
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import com.example.data.api.InvestecApiService
+import com.example.data.local.BankAccountDao
+import com.example.data.local.TransactionDao
 import com.example.data.model.BankAccountEntity
 import com.example.data.model.TransactionEntity
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class BankRepository(private val context: Context) {
-
-    private val database = BankDatabase.getDatabase(context)
-    private val accountDao = database.bankAccountDao()
-    private val transactionDao = database.transactionDao()
-
-    private val sharedPrefs = context.getSharedPreferences("InvestecPrefs", Context.MODE_PRIVATE)
+@Singleton
+class BankRepository @Inject constructor(
+    private val context: Context,
+    private val accountDao: BankAccountDao,
+    private val transactionDao: TransactionDao,
+    private val apiService: InvestecApiService,
+    private val dataStore: DataStore<Preferences>,
+    private val encryptedPrefs: SharedPreferences
+) {
 
     companion object {
         private const val TAG = "BankRepository"
@@ -29,46 +40,42 @@ class BankRepository(private val context: Context) {
         
         const val BASE_URL_SANDBOX = "https://openapisandbox.investec.com"
         const val BASE_URL_PRODUCTION = "https://openapi.investec.com"
+
+        private val USE_SANDBOX = booleanPreferencesKey("use_sandbox")
     }
 
     // ==========================================
     // CONFIGURATION ACCESSORS
     // ==========================================
 
-    fun useSandbox(): Boolean {
-        return sharedPrefs.getBoolean("use_sandbox", true)
+    fun useSandboxFlow(): Flow<Boolean> = dataStore.data.map { it[USE_SANDBOX] ?: true }
+
+    suspend fun useSandbox(): Boolean = useSandboxFlow().first()
+
+    suspend fun setUseSandbox(use: Boolean) {
+        dataStore.edit { it[USE_SANDBOX] = use }
     }
 
-    fun setUseSandbox(use: Boolean) {
-        sharedPrefs.edit().putBoolean("use_sandbox", use).apply()
-    }
-
-    fun getClientId(): String {
-        return sharedPrefs.getString("client_id", "") ?: ""
-    }
+    fun getClientId(): String = encryptedPrefs.getString("client_id", "") ?: ""
 
     fun setClientId(clientId: String) {
-        sharedPrefs.edit().putString("client_id", clientId).apply()
+        encryptedPrefs.edit().putString("client_id", clientId).apply()
     }
 
-    fun getClientSecret(): String {
-        return sharedPrefs.getString("client_secret", "") ?: ""
-    }
+    fun getClientSecret(): String = encryptedPrefs.getString("client_secret", "") ?: ""
 
     fun setClientSecret(secret: String) {
-        sharedPrefs.edit().putString("client_secret", secret).apply()
+        encryptedPrefs.edit().putString("client_secret", secret).apply()
     }
 
-    fun getApiKey(): String {
-        return sharedPrefs.getString("api_key", "") ?: ""
-    }
+    fun getApiKey(): String = encryptedPrefs.getString("api_key", "") ?: ""
 
     fun setApiKey(apiKey: String) {
-        sharedPrefs.edit().putString("api_key", apiKey).apply()
+        encryptedPrefs.edit().putString("api_key", apiKey).apply()
     }
 
     // Resolves current active credentials based on configuration
-    fun getActiveCredentials(): Triple<String, String, String> {
+    suspend fun getActiveCredentials(): Triple<String, String, String> {
         return if (useSandbox()) {
             val cid = getClientId().ifEmpty { DEFAULT_SANDBOX_CLIENT_ID }
             val sec = getClientSecret().ifEmpty { DEFAULT_SANDBOX_SECRET }
@@ -79,7 +86,7 @@ class BankRepository(private val context: Context) {
         }
     }
 
-    fun getActiveBaseUrl(): String {
+    suspend fun getActiveBaseUrl(): String {
         return if (useSandbox()) BASE_URL_SANDBOX else BASE_URL_PRODUCTION
     }
 
@@ -87,25 +94,9 @@ class BankRepository(private val context: Context) {
     // DATABASE EXPOSURES
     // ==========================================
 
-    fun getAccountsFlow(): Flow<List<BankAccountEntity>> {
-        return accountDao.getAccountsFlow()
-    }
+    fun getAccountsFlow(): Flow<List<BankAccountEntity>> = accountDao.getAccountsFlow()
 
-    fun getAccountByIdFlow(accountId: String): Flow<BankAccountEntity?> {
-        return accountDao.getAccountByIdFlow(accountId)
-    }
-
-    fun getLastFiveTransactionsFlow(accountId: String): Flow<List<TransactionEntity>> {
-        return transactionDao.getLastFiveTransactionsFlow(accountId)
-    }
-
-    suspend fun getAccountById(accountId: String): BankAccountEntity? = withContext(Dispatchers.IO) {
-        accountDao.getAccountById(accountId)
-    }
-
-    suspend fun getLastFiveTransactions(accountId: String): List<TransactionEntity> = withContext(Dispatchers.IO) {
-        transactionDao.getLastFiveTransactions(accountId)
-    }
+    fun getLastFiveTransactionsFlow(accountId: String): Flow<List<TransactionEntity>> = transactionDao.getLastFiveTransactionsFlow(accountId)
 
     // ==========================================
     // SYNCHRONIZATION FROM RECONCILE ACTIONS
@@ -119,14 +110,15 @@ class BankRepository(private val context: Context) {
             }
 
             val baseUrl = getActiveBaseUrl()
-            val service = InvestecApiClient.getService(baseUrl)
+            // In a real app, we might want to recreate the service with the correct baseUrl or use a dynamic Interceptor
+            // For now, we'll keep the repository as the coordinator
 
             // Step 1: Exchange Oauth2 token
             Log.d(TAG, "Requesting token from codebase: $baseUrl")
             val authBytes = "$clientId:$secret".toByteArray(Charsets.UTF_8)
             val base64Auth = "Basic " + Base64.encodeToString(authBytes, Base64.NO_WRAP)
             
-            val tokenResponse = service.getAccessToken(
+            val tokenResponse = apiService.getAccessToken(
                 basicAuthHeader = base64Auth,
                 apiKey = apiKey
             )
@@ -134,75 +126,72 @@ class BankRepository(private val context: Context) {
 
             // Step 2: Fetch Accounts list
             Log.d(TAG, "Fetching cash accounts...")
-            val accountsResult = service.getAccounts(bearerToken)
+            val accountsResult = apiService.getAccounts(bearerToken)
             val apiAccounts = accountsResult.data.accounts
 
-            val cachedAccounts = mutableListOf<BankAccountEntity>()
-
-            // Step 3: For each account, retrieve modern balance and transactions
-            for (apiAcc in apiAccounts) {
-                Log.d(TAG, "Syncing metadata for Account ID: ${apiAcc.accountId}")
-                
-                // Fetch Balance
-                val balanceResult = try {
-                    service.getAccountBalance(bearerToken, apiAcc.accountId).data
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to get balance for ${apiAcc.accountId}: ${e.message}")
-                    null
-                }
-
-                val currentBalance = balanceResult?.currentBalance ?: 0.0
-                val availableBalance = balanceResult?.availableBalance ?: 0.0
-                val currency = balanceResult?.currency ?: "ZAR"
-
-                // Create cache entity
-                val dbAccount = BankAccountEntity(
-                    accountId = apiAcc.accountId,
-                    accountNumber = apiAcc.accountNumber,
-                    accountName = apiAcc.accountName,
-                    referenceName = apiAcc.referenceName,
-                    productName = apiAcc.productName,
-                    kycCompliant = apiAcc.kycCompliant,
-                    profileId = apiAcc.profileId,
-                    profileName = apiAcc.profileName,
-                    currentBalance = currentBalance,
-                    availableBalance = availableBalance,
-                    currency = currency,
-                    lastUpdated = System.currentTimeMillis()
-                )
-                cachedAccounts.add(dbAccount)
-
-                // Fetch & insert transactions
-                Log.d(TAG, "Fetching list of transactions for associated profile id")
-                try {
-                    val txResult = service.getAccountTransactions(bearerToken, apiAcc.accountId, includePending = true).data
-                    val apiTxs = txResult.transactions
-
-                    val dbTxs = apiTxs.map { apiTx ->
-                        TransactionEntity(
-                            accountId = apiAcc.accountId,
-                            type = apiTx.type,
-                            transactionType = apiTx.transactionType ?: "Transfer",
-                            status = apiTx.status,
-                            description = apiTx.description,
-                            amount = apiTx.amount,
-                            runningBalance = apiTx.runningBalance ?: 0.0,
-                            postingDate = apiTx.postingDate,
-                            transactionDate = apiTx.transactionDate,
-                            uuid = apiTx.uuid
-                        )
+            // Step 3: [OPTIMIZATION] Parallel Synchronization
+            val cachedAccounts = apiAccounts.map { apiAcc ->
+                async {
+                    Log.d(TAG, "Syncing metadata for Account ID: ${apiAcc.accountId}")
+                    
+                    // Fetch Balance
+                    val balanceResult = try {
+                        apiService.getAccountBalance(bearerToken, apiAcc.accountId).data
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to get balance for ${apiAcc.accountId}: ${e.message}")
+                        null
                     }
-                    transactionDao.replaceTransactionsForAccount(apiAcc.accountId, dbTxs)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error fetching transactions: ${e.message}")
+
+                    val currentBalance = balanceResult?.currentBalance ?: 0.0
+                    val availableBalance = balanceResult?.availableBalance ?: 0.0
+                    val currency = balanceResult?.currency ?: "ZAR"
+
+                    // Fetch transactions in parallel with balance if possible, but here we'll just do it within the async block
+                    try {
+                        val txResult = apiService.getAccountTransactions(bearerToken, apiAcc.accountId, includePending = true).data
+                        val apiTxs = txResult.transactions
+
+                        val dbTxs = apiTxs.map { apiTx ->
+                            TransactionEntity(
+                                accountId = apiAcc.accountId,
+                                type = apiTx.type,
+                                transactionType = apiTx.transactionType ?: "Transfer",
+                                status = apiTx.status,
+                                description = apiTx.description,
+                                amount = apiTx.amount,
+                                runningBalance = apiTx.runningBalance ?: 0.0,
+                                postingDate = apiTx.postingDate,
+                                transactionDate = apiTx.transactionDate,
+                                uuid = apiTx.uuid
+                            )
+                        }
+                        transactionDao.replaceTransactionsForAccount(apiAcc.accountId, dbTxs)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching transactions for ${apiAcc.accountId}: ${e.message}")
+                    }
+
+                    BankAccountEntity(
+                        accountId = apiAcc.accountId,
+                        accountNumber = apiAcc.accountNumber,
+                        accountName = apiAcc.accountName,
+                        referenceName = apiAcc.referenceName,
+                        productName = apiAcc.productName,
+                        kycCompliant = apiAcc.kycCompliant,
+                        profileId = apiAcc.profileId,
+                        profileName = apiAcc.profileName,
+                        currentBalance = currentBalance,
+                        availableBalance = availableBalance,
+                        currency = currency,
+                        lastUpdated = System.currentTimeMillis()
+                    )
                 }
-            }
+            }.awaitAll()
 
             if (cachedAccounts.isNotEmpty()) {
                 accountDao.replaceAccounts(cachedAccounts)
             }
 
-            // Trigger widget update broadcast since local data changed
+            // Trigger widget update broadcast
             triggerWidgetUpdate(context)
 
             Result.success(Unit)
