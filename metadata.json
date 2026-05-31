@@ -1,0 +1,6 @@
+{
+  "name": "Bank Balance Widget",
+  "description": "An Android app and Home Screen Widget to view Investec bank balances and the last five transactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
