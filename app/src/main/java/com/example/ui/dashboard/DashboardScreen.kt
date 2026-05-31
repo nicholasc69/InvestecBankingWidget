@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.BankAccountEntity
@@ -524,7 +525,7 @@ fun BankAccountGlossyCard(
 
     Card(
         modifier = Modifier
-            .size(width = 240.dp, height = 135.dp)
+            .size(width = 240.dp, height = 155.dp)
             .clickable { onSelect() }
             .testTag("account_card_${account.accountId}"),
         colors = CardDefaults.cardColors(containerColor = if (isSelected) isSelectedBg else normBg),
