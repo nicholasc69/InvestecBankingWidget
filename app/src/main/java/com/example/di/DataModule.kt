@@ -34,12 +34,26 @@ object DataModule {
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
 
-        return EncryptedSharedPreferences.create(
-            context,
-            "secure_investec_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                "secure_investec_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            // [CRITICAL] Fix for AEADBadTagException / Signature/MAC verification failed
+            // This happens if the Keystore key was invalidated (e.g. app reinstall or OS change)
+            // but the encrypted file persists. We delete the corrupted file and try again.
+            context.deleteSharedPreferences("secure_investec_prefs")
+            EncryptedSharedPreferences.create(
+                context,
+                "secure_investec_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
     }
 }

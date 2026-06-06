@@ -36,6 +36,8 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/bank_widget_info" />
         </receiver>
+        <uses-native-library android:name="libvndksupport.so" android:required="false"/>
+        <uses-native-library android:name="libOpenCL.so" android:required="false"/>
 
     </application>
 

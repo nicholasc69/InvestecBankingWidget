@@ -126,7 +126,7 @@ class BankRepository @Inject constructor(
 
             // Step 2: Fetch Accounts list
             Log.d(TAG, "Fetching cash accounts...")
-            val accountsResult = apiService.getAccounts(bearerToken)
+            val accountsResult = apiService.getAccounts(bearerToken, apiKey)
             val apiAccounts = accountsResult.data.accounts
 
             // Step 3: [OPTIMIZATION] Parallel Synchronization
@@ -136,7 +136,7 @@ class BankRepository @Inject constructor(
                     
                     // Fetch Balance
                     val balanceResult = try {
-                        apiService.getAccountBalance(bearerToken, apiAcc.accountId).data
+                        apiService.getAccountBalance(bearerToken, apiKey, apiAcc.accountId).data
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to get balance for ${apiAcc.accountId}: ${e.message}")
                         null
@@ -148,7 +148,7 @@ class BankRepository @Inject constructor(
 
                     // Fetch transactions in parallel with balance if possible, but here we'll just do it within the async block
                     try {
-                        val txResult = apiService.getAccountTransactions(bearerToken, apiAcc.accountId, includePending = true).data
+                        val txResult = apiService.getAccountTransactions(bearerToken, apiKey, apiAcc.accountId, includePending = true).data
                         val apiTxs = txResult.transactions
 
                         val dbTxs = apiTxs.map { apiTx ->

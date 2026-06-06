@@ -20,18 +20,21 @@ interface InvestecApiService {
 
     @GET("za/pb/v1/accounts")
     suspend fun getAccounts(
-        @Header("Authorization") bearerToken: String
+        @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String
     ): ApiResponseWrapper<AccountsData>
 
     @GET("za/pb/v1/accounts/{accountId}/balance")
     suspend fun getAccountBalance(
         @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String,
         @Path("accountId") accountId: String
     ): ApiResponseWrapper<ApiBalance>
 
     @GET("za/pb/v1/accounts/{accountId}/transactions")
     suspend fun getAccountTransactions(
         @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String,
         @Path("accountId") accountId: String,
         @Query("includePending") includePending: Boolean = true
     ): ApiResponseWrapper<TransactionsData>
