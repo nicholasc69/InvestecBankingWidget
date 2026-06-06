@@ -27,7 +27,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
-data class Message(val text: String, val isUser: Boolean)
+data class Message(val text: String, val isUser: Boolean, val isSystem: Boolean = false)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,19 +92,28 @@ fun ChatScreen(
 
 @Composable
 fun ChatBubble(message: Message) {
-    val alignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
-    val color = if (message.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    val alignment = when {
+        message.isSystem -> Alignment.Center
+        message.isUser -> Alignment.CenterEnd
+        else -> Alignment.CenterStart
+    }
+    val color = when {
+        message.isSystem -> MaterialTheme.colorScheme.surfaceVariant
+        message.isUser -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
 
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = alignment) {
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = color,
-            tonalElevation = 2.dp
+            tonalElevation = if (message.isSystem) 0.dp else 2.dp
         ) {
             Text(
-                text = message.text,
+                text = if (message.isSystem) "System: ${message.text}" else message.text,
                 modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodyMedium
+                style = if (message.isSystem) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
+                color = if (message.isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
             )
         }
     }

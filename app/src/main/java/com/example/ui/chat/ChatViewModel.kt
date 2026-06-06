@@ -25,8 +25,11 @@ class ChatViewModel @Inject constructor(
 ) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
+    private val systemPrompt = "You are a helpful financial assistant."
     
-    val messages = mutableStateListOf(Message(text = "Hello! How can I help you today?", isUser = false))
+    val messages = mutableStateListOf(
+        Message(text = systemPrompt, isUser = false, isSystem = true)
+    )
     var inputText by mutableStateOf("")
     var isInitializing by mutableStateOf(true)
     var initializationError by mutableStateOf<String?>(null)
@@ -39,11 +42,6 @@ class ChatViewModel @Inject constructor(
         )
         Engine(engineConfig)
     }
-
-    val conversationConfig = ConversationConfig(
-        systemInstruction = Contents.of("You are a helpful financial assistant."),
-        samplerConfig = SamplerConfig(topK = 10, topP = 0.95, temperature = 0.8),
-    )
 
     init {
         initializeEngine()
@@ -72,6 +70,14 @@ class ChatViewModel @Inject constructor(
         val query = inputText
         if (query.isBlank() || isInitializing) return
 
+        val history = messages.map {
+            when {
+                it.isSystem -> com.google.ai.edge.litertlm.Message.system(it.text)
+                it.isUser -> com.google.ai.edge.litertlm.Message.user(it.text)
+                else -> com.google.ai.edge.litertlm.Message.model(it.text)
+            }
+        }
+
         messages.add(Message(text = query, isUser = true))
         inputText = ""
 
@@ -80,6 +86,11 @@ class ChatViewModel @Inject constructor(
             messages.add(Message(text = "...", isUser = false))
             
             try {
+                val conversationConfig = ConversationConfig(
+                    systemInstruction = Contents.of(systemPrompt),
+                    initialMessages = history,
+                    samplerConfig = SamplerConfig(topK = 10, topP = 0.95, temperature = 0.8),
+                )
                 engine.createConversation(conversationConfig).use { conversation ->
                     var responseText = ""
                     conversation.sendMessageAsync(query).collect { chunk ->
