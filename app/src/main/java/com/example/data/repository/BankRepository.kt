@@ -96,6 +96,8 @@ class BankRepository @Inject constructor(
 
     fun getAccountsFlow(): Flow<List<BankAccountEntity>> = accountDao.getAccountsFlow()
 
+    suspend fun getLastFiveTransactions(accountId: String): List<TransactionEntity> = transactionDao.getLastFiveTransactions(accountId)
+
     fun getLastFiveTransactionsFlow(accountId: String): Flow<List<TransactionEntity>> = transactionDao.getLastFiveTransactionsFlow(accountId)
 
     // ==========================================
