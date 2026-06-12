@@ -73,7 +73,8 @@ class MainActivity : ComponentActivity() {
                 ChatNavDestination.HOME -> DashboardScreen(
                   viewModel = viewModel,
                   modifier = Modifier.padding(innerPadding))
-                ChatNavDestination.CHAT -> ChatScreen(modifier =  Modifier.padding(innerPadding))
+                ChatNavDestination.CHAT -> ChatScreen(
+                  modifier =  Modifier.padding(innerPadding))
 
               }
             }

@@ -52,7 +52,7 @@ fun ChatScreen(
             modifier = Modifier.weight(1f),
             state = listState
         ) {
-            items(messages) { message ->
+            items(messages.filter { !it.isSystem && it.text.isNotBlank() }) { message ->
                 ChatBubble(message)
             }
         }
@@ -110,7 +110,7 @@ fun ChatBubble(message: Message) {
             tonalElevation = if (message.isSystem) 0.dp else 2.dp
         ) {
             Text(
-                text = if (message.isSystem) "System: ${message.text}" else message.text,
+                text = message.text,
                 modifier = Modifier.padding(12.dp),
                 style = if (message.isSystem) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
                 color = if (message.isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
