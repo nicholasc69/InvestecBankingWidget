@@ -40,10 +40,46 @@ class BankWidgetProvider : AppWidgetProvider() {
         // Retrieve database data on an IO Coroutine thread
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val database = BankDatabase.getDatabase(context)
-                val accountsFlow = database.bankAccountDao().getAccountsFlow()
-                val accounts = accountsFlow.firstOrNull() ?: emptyList()
+                val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
+                val isUnlocked = prefs.getBoolean("widget_unlocked", false)
+                val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
+                val currentTime = System.currentTimeMillis()
+                val isExpired = (currentTime - lastAuthTime) > 5_000
 
+                val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                val isKeyguardLocked = keyguardManager.isKeyguardLocked
+
+                val showUnlocked = isUnlocked && !isExpired && !isKeyguardLocked
+
+                if (!showUnlocked) {
+                    // Optimized path: If widget is locked, bypass DB queries completely!
+                    for (appWidgetId in appWidgetIds) {
+                        val views = RemoteViews(context.packageName, R.layout.bank_widget_layout)
+                        views.setViewVisibility(R.id.widget_content_container, View.GONE)
+                        views.setViewVisibility(R.id.widget_locked_container, View.VISIBLE)
+                        
+                        // Re-bind the click intent to authenticate on tap
+                        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra("JUST_AUTHENTICATE", true)
+                            action = "com.example.action.AUTHENTICATE_WIDGET"
+                        }
+                        val pendingIntent = PendingIntent.getActivity(
+                            context,
+                            appWidgetId,
+                            openAppIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+                        
+                        appWidgetManager.updateAppWidget(appWidgetId, views)
+                    }
+                    return@launch
+                }
+
+                // If unlocked, fetch account details and transactions from database using suspend functions directly (no Flow subscription overhead)
+                val database = BankDatabase.getDatabase(context)
+                val accounts = database.bankAccountDao().getAccounts()
                 val activeAccount = accounts.firstOrNull()
                 val transactions = activeAccount?.let {
                     database.transactionDao().getLastFiveTransactions(it.accountId)

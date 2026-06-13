@@ -3,6 +3,7 @@ package com.example.data.model
 import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -30,7 +31,10 @@ data class BankAccountEntity(
 )
 
 @Immutable
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    indices = [Index(value = ["accountId", "postingDate"])]
+)
 @JsonClass(generateAdapter = true)
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
