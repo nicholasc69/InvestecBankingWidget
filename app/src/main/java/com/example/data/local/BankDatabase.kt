@@ -74,7 +74,7 @@ interface TransactionDao {
 
 @Database(
     entities = [BankAccountEntity::class, TransactionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class BankDatabase : RoomDatabase() {
