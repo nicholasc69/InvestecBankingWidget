@@ -9,13 +9,15 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ai.BankingToolSet
+import com.example.data.ai.LiteRtEngineManager
 import com.example.data.repository.BankRepository
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
-import com.google.ai.edge.litertlm.SamplerConfig
+import com.google.ai.edge.litertlm.LogSeverity
 import com.google.ai.edge.litertlm.tool
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -26,59 +28,74 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     application: Application,
-    private val repository: BankRepository
+    private val repository: BankRepository,
+    private val engineManager: LiteRtEngineManager
 ) : AndroidViewModel(application) {
 
-    private val context = application.applicationContext
     private val systemPrompt = """
         You are Alex, a helpful financial assistant for Investec Private Banking.
-        You have access to tools that allow you to view account balances, recent transactions, and synchronize data.
+        You have access to tools that allow you to view account balances, recent transactions, all transactions, and synchronize data.
         
         Guidelines:
         1. When asked about accounts or balances, use 'getAllAccounts' to get the latest info.
-        2. To see transactions for a specific account, first get the account list to find the correct 'accountId', then use 'getRecentTransactions'.
+        2. To see recent transactions for a specific account, first get the account list to find the correct 'accountId', then use 'getRecentTransactions' with that accountId.
         3. If the user asks for 'latest' or 'updated' info, use 'syncBankingData' first.
-        4. Always present financial data clearly. Use bullet points or tables where appropriate.
+        4. Always present financial data clearly and conversationally. Use clean bullet points or lists. Avoid using markdown tables (such as |:---| structures) or database-style notation, as they are not user friendly.
         5. If you need an 'accountId' that you don't have, use 'getAllAccounts' to find it by name.
+        6. If the user asks to see recent transactions across all accounts, or does not specify which account to check, use 'getRecentTransactions' with accountId set to 'ALL'.
+        7. If the user asks to see all transactions (not just recent ones) for an account or across all accounts, use 'getAllTransactions' (passing the specific accountId, or 'ALL' if not specified / across all accounts).
     """.trimIndent()
-    
+
     val messages = mutableStateListOf<Message>()
     var inputText by mutableStateOf("")
     var isInitializing by mutableStateOf(true)
     var initializationError by mutableStateOf<String?>(null)
 
-    private val engine: Engine by lazy {
-        val engineConfig = EngineConfig(
-            modelPath = "/data/local/tmp/gemma-4-E2B-it.litertlm",
-            backend = Backend.CPU(),
-            cacheDir = context.cacheDir.absolutePath
-        )
-        Engine(engineConfig)
-    }
+    private var engine: Engine? = null
+    private var conversation: Conversation? = null
 
     init {
         initializeEngine()
     }
 
     private fun initializeEngine() {
+        Log.d("ChatViewModel", "Requesting LiteRT-LM Engine from LiteRtEngineManager")
         viewModelScope.launch {
             try {
+                // Retrieve the pre-initialized or currently initializing engine
+                val newEngine = engineManager.getEngine()
+                engine = newEngine
+
                 withContext(Dispatchers.IO) {
-                    engine.initialize()
-
-                    processQuery("""Hello! Please introduce yourself to the client
-
- Your Name is Alex.
- 
- Keep you introduction short to one paragraph describing the services you offer.
-                    """.trimMargin(), isHidden = true)
+                    val convConfig = ConversationConfig(
+                        systemInstruction = Contents.of(systemPrompt),
+                        tools = listOf(tool(BankingToolSet(repository))),
+                        automaticToolCalling = true
+                    )
+                    conversation = newEngine.createConversation(convConfig)
                 }
                 isInitializing = false
+                withContext(Dispatchers.Main) {
+                    if (messages.isEmpty()) {
+                        messages.add(
+                            Message(
+                                text = "Hello! I'm Alex, your Investec Private Banking assistant. How can I help you manage your accounts, view transactions, or execute payments today?",
+                                isUser = false
+                            )
+                        )
+                    }
+                }
             } catch (e: Exception) {
+                Log.e("ChatViewModel", "Failed to initialize engine", e)
                 isInitializing = false
                 initializationError = e.message
                 withContext(Dispatchers.Main) {
-                    messages.add(Message(text = "Failed to initialize AI: ${e.message}", isUser = false))
+                    messages.add(
+                        Message(
+                            text = "Failed to initialize AI: ${e.message}",
+                            isUser = false
+                        )
+                    )
                 }
             }
         }
@@ -92,136 +109,38 @@ class ChatViewModel @Inject constructor(
         val query = inputText
         if (query.isBlank() || isInitializing) return
 
+        val currentConversation = conversation ?: return
+
         messages.add(Message(text = query, isUser = true))
         inputText = ""
 
         viewModelScope.launch {
             val botMessageIndex = messages.size
-            messages.add(Message(text = "Thinking...", isUser = false))
-            
-            try {
-                val history = messages.map {
-                    when {
-                        it.isSystem -> com.google.ai.edge.litertlm.Message.system(it.text)
-                        it.isUser -> com.google.ai.edge.litertlm.Message.user(it.text)
-                        else -> com.google.ai.edge.litertlm.Message.model(it.text)
-                    }
-                }
+            messages.add(Message(text = "", isUser = false))
 
-                val conversationConfig = ConversationConfig(
-                    systemInstruction = Contents.of(systemPrompt),
-                    initialMessages = history,
-                    samplerConfig = SamplerConfig(topK = 10, topP = 0.95, temperature = 0.8),
-                    tools = listOf(tool(BankingToolSet(repository = repository))),
-                    automaticToolCalling = true
-                )
-                
-                engine.createConversation(conversationConfig).use { conversation ->
-                    var fullResponse = ""
-                    var currentBotMessageIndex = botMessageIndex
-                    conversation.sendMessageAsync(query).collect { responseMessage ->
-                        // The library returns a Flow<Message>. We extract the text from the model's response.
-                        val contentText = responseMessage.contents.contents
-                            .filterIsInstance<com.google.ai.edge.litertlm.Content.Text>()
-                            .joinToString("") { it.text }
-                        
-                        if (contentText.isNotEmpty()) {
-                            fullResponse += contentText
-                            withContext(Dispatchers.Main) {
-                                if (currentBotMessageIndex < messages.size) {
-                                    messages[currentBotMessageIndex] = Message(text = fullResponse, isUser = false)
-                                } else {
-                                    // Fallback in case list changed
-                                    messages.add(Message(text = fullResponse, isUser = false))
-                                    currentBotMessageIndex = messages.size - 1
-                                }
+            try {
+                var fullResponse = ""
+                withContext(Dispatchers.IO) {
+                    currentConversation.sendMessageAsync(query).collect { token ->
+                        fullResponse += token
+                        Log.d("ChatViewModel", "Token: '$token'")
+                        withContext(Dispatchers.Main) {
+                            if (botMessageIndex < messages.size) {
+                                messages[botMessageIndex] =
+                                    Message(text = fullResponse, isUser = false)
                             }
                         }
                     }
                 }
+                Log.d("ChatViewModel", "Full response: '$fullResponse'")
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error sending message", e)
                 withContext(Dispatchers.Main) {
-                    messages[botMessageIndex] = Message(text = "Error: ${e.localizedMessage ?: "Unknown error"}", isUser = false)
-                }
-            }
-        }
-    }
-
-    private fun processQuery(query: String, isHidden: Boolean = false) {
-        viewModelScope.launch {
-            if (!isHidden) {
-                messages.add(Message(text = query, isUser = true))
-            }
-
-            val botMessageIndex = messages.size
-            if (!isHidden) {
-                messages.add(Message(text = "...", isUser = false))
-            }
-
-            try {
-                val history = if (isHidden) {
-                    messages.map {
-                        when {
-                            it.isSystem -> com.google.ai.edge.litertlm.Message.system(it.text)
-                            it.isUser -> com.google.ai.edge.litertlm.Message.user(it.text)
-                            else -> com.google.ai.edge.litertlm.Message.model(it.text)
-                        }
-                    }
-                } else {
-                    messages.dropLast(1).map { // Drop the "..." placeholder
-                        when {
-                            it.isSystem -> com.google.ai.edge.litertlm.Message.system(it.text)
-                            it.isUser -> com.google.ai.edge.litertlm.Message.user(it.text)
-                            else -> com.google.ai.edge.litertlm.Message.model(it.text)
-                        }
-                    }
-                }
-
-                val conversationConfig = ConversationConfig(
-                    systemInstruction = Contents.of(systemPrompt),
-                    initialMessages = history,
-                    samplerConfig = SamplerConfig(topK = 10, topP = 0.95, temperature = 0.8),
-                    tools = listOf(tool(BankingToolSet(repository = repository))),
-                    automaticToolCalling = true
-                )
-                
-                engine.createConversation(conversationConfig).use { conversation ->
-                    var fullResponse = ""
-                    var currentBotMessageIndex = if (!isHidden) botMessageIndex else -1
-
-                    conversation.sendMessageAsync(query).collect { responseMessage ->
-                        val contentText = responseMessage.contents.contents
-                            .filterIsInstance<com.google.ai.edge.litertlm.Content.Text>()
-                            .joinToString("") { it.text }
-                        
-                        if (contentText.isNotEmpty()) {
-                            fullResponse += contentText
-                            
-                            withContext(Dispatchers.Main) {
-                                if (!isHidden) {
-                                    // Update existing placeholder
-                                    if (currentBotMessageIndex != -1 && currentBotMessageIndex < messages.size) {
-                                        messages[currentBotMessageIndex] = Message(text = fullResponse, isUser = false)
-                                    }
-                                } else if (responseMessage.role == com.google.ai.edge.litertlm.Role.MODEL) {
-                                    // For hidden queries, add the model response as a single bubble once it starts coming
-                                    if (currentBotMessageIndex == -1) {
-                                        messages.add(Message(text = fullResponse, isUser = false))
-                                        currentBotMessageIndex = messages.size - 1
-                                    } else {
-                                        messages[currentBotMessageIndex] = Message(text = fullResponse, isUser = false)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ChatViewModel", "Error in processQuery", e)
-                if (!isHidden) {
-                    withContext(Dispatchers.Main) {
-                        messages[botMessageIndex] = Message(text = "Error: ${e.localizedMessage}", isUser = false)
+                    val errorMessage = "Error: ${e.localizedMessage ?: "Unknown error"}"
+                    if (botMessageIndex < messages.size) {
+                        messages[botMessageIndex] = Message(text = errorMessage, isUser = false)
+                    } else {
+                        messages.add(Message(text = errorMessage, isUser = false))
                     }
                 }
             }
@@ -231,9 +150,10 @@ class ChatViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         try {
-            engine.close()
+            conversation?.close()
+            // Do NOT close engine as its lifecycle is managed by LiteRtEngineManager singleton
         } catch (e: Exception) {
-            // Log error
+            Log.e("ChatViewModel", "Error closing resources", e)
         }
     }
 }

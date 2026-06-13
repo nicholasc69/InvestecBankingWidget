@@ -1,11 +1,28 @@
 package com.example.data.api
 
-import com.example.data.model.*
+import com.example.data.model.AccountsData
+import com.example.data.model.ApiBalance
+import com.example.data.model.ApiResponseWrapper
+import com.example.data.model.TokenResponse
+import com.example.data.model.TransactionsData
+import com.example.data.model.BeneficiariesData
+import com.example.data.model.PaymentRequest
+import com.example.data.model.PaymentResponse
+import com.example.data.model.TransferRequest
+import com.example.data.model.TransferResponse
+import com.example.data.model.CardsData
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.*
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
+import retrofit2.http.Body
 import java.util.concurrent.TimeUnit
 
 interface InvestecApiService {
@@ -36,8 +53,38 @@ interface InvestecApiService {
         @Header("Authorization") bearerToken: String,
         @Header("x-api-key") apiKey: String,
         @Path("accountId") accountId: String,
+        @Query("fromDate") fromDate: String? = null,
+        @Query("toDate") toDate: String? = null,
         @Query("includePending") includePending: Boolean = true
     ): ApiResponseWrapper<TransactionsData>
+
+    @GET("za/pb/v1/accounts/beneficiaries")
+    suspend fun getBeneficiaries(
+        @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String
+    ): ApiResponseWrapper<BeneficiariesData>
+
+    @POST("za/pb/v1/accounts/{accountId}/paymultiple")
+    suspend fun payBeneficiary(
+        @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String,
+        @Path("accountId") accountId: String,
+        @Body request: PaymentRequest
+    ): ApiResponseWrapper<PaymentResponse>
+
+    @POST("za/pb/v1/accounts/{accountId}/transfermultiple")
+    suspend fun transferFunds(
+        @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String,
+        @Path("accountId") accountId: String,
+        @Body request: TransferRequest
+    ): ApiResponseWrapper<TransferResponse>
+
+    @GET("za/v1/cards")
+    suspend fun getCards(
+        @Header("Authorization") bearerToken: String,
+        @Header("x-api-key") apiKey: String
+    ): ApiResponseWrapper<CardsData>
 }
 
 object InvestecApiClient {

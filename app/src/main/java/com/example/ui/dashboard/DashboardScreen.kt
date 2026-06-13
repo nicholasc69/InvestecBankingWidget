@@ -1,25 +1,81 @@
 package com.example.ui.dashboard
 
-import androidx.compose.animation.*
+import com.example.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -28,7 +84,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.BankAccountEntity
@@ -36,7 +91,8 @@ import com.example.data.model.TransactionEntity
 import com.example.data.repository.BankRepository
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +148,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Home,
+                                painter = painterResource(id = R.drawable.ic_zebra_head),
                                 contentDescription = null,
                                 tint = accentOnContainer,
                                 modifier = Modifier.size(18.dp)
@@ -115,9 +171,17 @@ fun DashboardScreen(
                         modifier = Modifier.testTag("refresh_button")
                     ) {
                         if (isRefreshing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = accentOnContainer, strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = accentOnContainer,
+                                strokeWidth = 2.dp
+                            )
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh data", tint = textSecondary)
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh data",
+                                tint = textSecondary
+                            )
                         }
                     }
                     IconButton(
@@ -165,17 +229,29 @@ fun DashboardScreen(
 
             when (val state = uiState) {
                 is DashboardUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize().background(backgroundLight), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundLight),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = accentOnContainer)
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Loading bank summary from secure cache...", color = textSecondary, fontSize = 14.sp)
+                            Text(
+                                "Loading bank summary from secure cache...",
+                                color = textSecondary,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
+
                 is DashboardUiState.Success -> {
                     val accounts = state.accounts
                     val selectedAccount = state.selectedAccount
+                    val profiles = state.profiles
+                    val selectedProfileId = state.selectedProfileId
 
                     if (accounts.isEmpty()) {
                         EmptyStateView(
@@ -189,9 +265,82 @@ fun DashboardScreen(
                                 .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            // Section: Horizontal Bank Accounts Card List
+                            // Section: Profile Selection Dropdown
                             item {
                                 Spacer(modifier = Modifier.height(12.dp))
+                                var expanded by remember { mutableStateOf(false) }
+                                val currentProfileName = profiles.find { it.first == selectedProfileId }?.second ?: "Default Profile"
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                ) {
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable { expanded = true },
+                                        colors = CardDefaults.cardColors(containerColor = cardSurface),
+                                        border = BorderStroke(1.dp, cardBorder)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = "Select Profile",
+                                                    color = textMuted,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = currentProfileName,
+                                                    color = textPrimary,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Select Profile",
+                                                tint = textSecondary
+                                            )
+                                        }
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false },
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.9f)
+                                            .background(cardSurface)
+                                    ) {
+                                        profiles.forEach { (profileId, profileName) ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = profileName,
+                                                        fontWeight = if (profileId == selectedProfileId) FontWeight.Bold else FontWeight.Normal,
+                                                        color = textPrimary
+                                                    )
+                                                },
+                                                onClick = {
+                                                    viewModel.selectProfile(profileId)
+                                                    expanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Section: Horizontal Bank Accounts Card List
+                            item {
                                 Text(
                                     text = "Your Accounts",
                                     color = textSecondary,
@@ -204,7 +353,8 @@ fun DashboardScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     items(accounts) { account ->
-                                        val isCurrent = account.accountId == selectedAccount?.accountId
+                                        val isCurrent =
+                                            account.accountId == selectedAccount?.accountId
                                         BankAccountGlossyCard(
                                             account = account,
                                             isSelected = isCurrent,
@@ -245,12 +395,16 @@ fun DashboardScreen(
                                                 fontWeight = FontWeight.Bold,
                                                 letterSpacing = 1.2.sp
                                             )
-                                            
+
                                             // KYC status pill
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(20.dp))
-                                                    .background(if (selectedAccount.kycCompliant) Color(0xFFE8F5E9) else Color(0xFFFFEBEE))
+                                                    .background(
+                                                        if (selectedAccount.kycCompliant) Color(
+                                                            0xFFE8F5E9
+                                                        ) else Color(0xFFFFEBEE)
+                                                    )
                                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
@@ -280,9 +434,18 @@ fun DashboardScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                    Icon(Icons.Default.Info, contentDescription = null, tint = textMuted, modifier = Modifier.size(32.dp))
+                                                    Icon(
+                                                        Icons.Default.Info,
+                                                        contentDescription = null,
+                                                        tint = textMuted,
+                                                        modifier = Modifier.size(32.dp)
+                                                    )
                                                     Spacer(modifier = Modifier.height(8.dp))
-                                                    Text("No recent transaction postings found for this account.", color = textSecondary, fontSize = 12.sp)
+                                                    Text(
+                                                        "No recent transaction postings found for this account.",
+                                                        color = textSecondary,
+                                                        fontSize = 12.sp
+                                                    )
                                                 }
                                             }
                                         }
@@ -298,26 +461,45 @@ fun DashboardScreen(
                                     }
                                 }
                             }
-                            
+
                             item {
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
                         }
                     }
                 }
+
                 is DashboardUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize().background(backgroundLight), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundLight),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(32.dp)
                         ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = redDebit, modifier = Modifier.size(48.dp))
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = redDebit,
+                                modifier = Modifier.size(48.dp)
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text(state.message, color = textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                state.message,
+                                color = textPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = { viewModel.refreshData() },
-                                colors = ButtonDefaults.buttonColors(containerColor = accentOnContainer, contentColor = Color.White)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = accentOnContainer,
+                                    contentColor = Color.White
+                                )
                             ) {
                                 Text("Retry Synchronizing")
                             }
@@ -392,7 +574,12 @@ fun CredentialsSettingsForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Developer Sandbox Mode", color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Developer Sandbox Mode",
+                        color = textPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Text("Deploys read-only mock banks", color = textSecondary, fontSize = 11.sp)
                 }
                 Switch(
@@ -415,7 +602,9 @@ fun CredentialsSettingsForm(
                     label = { Text("Client ID") },
                     textStyle = LocalTextStyle.current.copy(color = textPrimary),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-                    modifier = Modifier.fillMaxWidth().testTag("client_id_field"),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("client_id_field"),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentOnContainer,
@@ -433,7 +622,9 @@ fun CredentialsSettingsForm(
                     textStyle = LocalTextStyle.current.copy(color = textPrimary),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth().testTag("client_secret_field"),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("client_secret_field"),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentOnContainer,
@@ -450,7 +641,9 @@ fun CredentialsSettingsForm(
                     label = { Text("x-api-key") },
                     textStyle = LocalTextStyle.current.copy(color = textPrimary),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-                    modifier = Modifier.fillMaxWidth().testTag("api_key_field"),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("api_key_field"),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentOnContainer,
@@ -469,11 +662,32 @@ fun CredentialsSettingsForm(
                         .padding(12.dp)
                 ) {
                     Column {
-                        Text("Active Sandbox Credentials:", color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Active Sandbox Credentials:",
+                            color = textSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Client ID: ${BankRepository.DEFAULT_SANDBOX_CLIENT_ID.take(12)}...", color = textPrimary, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                        Text("Secret: **** (Active Personal sandbox)", color = textPrimary, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                        Text("BaseUrl: https://openapisandbox.investec.com", color = Color(0xFF116D34), fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Client ID: ${BankRepository.DEFAULT_SANDBOX_CLIENT_ID.take(12)}...",
+                            color = textPrimary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            "Secret: **** (Active Personal sandbox)",
+                            color = textPrimary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            "BaseUrl: https://openapisandbox.investec.com",
+                            color = Color(0xFF116D34),
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -493,7 +707,10 @@ fun CredentialsSettingsForm(
                         keyboardController?.hide()
                         onSave(sbState, cidState, secretState, apiKeyState)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentContainer, contentColor = accentOnContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentContainer,
+                        contentColor = accentOnContainer
+                    )
                 ) {
                     Text("Apply & Sync")
                 }
@@ -635,7 +852,7 @@ fun BalanceDetailedMetricsCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Home,
+                            painter = painterResource(id = R.drawable.ic_zebra_head),
                             contentDescription = null,
                             tint = Color(0xFF001B3E),
                             modifier = Modifier.size(18.dp)
@@ -656,7 +873,7 @@ fun BalanceDetailedMetricsCard(
                         )
                     }
                 }
-                
+
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "Secured connection",
@@ -726,7 +943,7 @@ fun BalanceDetailedMetricsCard(
 
             val timeStr = SimpleDateFormat("HH:mm:ss, dd MMM yyyy", Locale.getDefault())
                 .format(Date(account.lastUpdated))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -755,7 +972,7 @@ fun TransactionRow(
 ) {
     val df = DecimalFormat("#,##0.00")
     val isCredit = transaction.type.equals("CREDIT", ignoreCase = true)
-    
+
     val textPrimary = Color(0xFF1A1C1E)
     val textMuted = Color(0xFF74777F)
     val amountColor = if (isCredit) Color(0xFF116D34) else Color(0xFFBA1A1A)
@@ -789,20 +1006,67 @@ fun TransactionRow(
                             .size(38.dp)
                             .clip(RoundedCornerShape(19.dp))
                             .background(Color.White)
-                            .border(BorderStroke(1.dp, Color(0xFFC4C6D0)), RoundedCornerShape(19.dp)),
+                            .border(
+                                BorderStroke(1.dp, Color(0xFFC4C6D0)),
+                                RoundedCornerShape(19.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         // Dynamically assign stylish vector graphics
                         val iconVector = when {
-                            transaction.description.contains("APPLE", ignoreCase = true) || transaction.description.contains("STORE", ignoreCase = true) -> Icons.Default.ShoppingCart
-                            transaction.description.contains("COFFEE", ignoreCase = true) || transaction.description.contains("CAFE", ignoreCase = true) -> Icons.Default.Favorite
-                            transaction.description.contains("SALARY", ignoreCase = true) || transaction.description.contains("DEPOSIT", ignoreCase = true) || transaction.description.contains("PAYMENT", ignoreCase = true) -> Icons.Default.Check
-                            transaction.description.contains("UTILITY", ignoreCase = true) || transaction.description.contains("ELEC", ignoreCase = true) || transaction.description.contains("POWER", ignoreCase = true) -> Icons.Default.Star
-                            transaction.description.contains("RESTAURANT", ignoreCase = true) || transaction.description.contains("GRILL", ignoreCase = true) || transaction.description.contains("FOOD", ignoreCase = true) -> Icons.Default.Person
+                            transaction.description.contains(
+                                "APPLE",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "STORE",
+                                ignoreCase = true
+                            ) -> Icons.Default.ShoppingCart
+
+                            transaction.description.contains(
+                                "COFFEE",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "CAFE",
+                                ignoreCase = true
+                            ) -> Icons.Default.Favorite
+
+                            transaction.description.contains(
+                                "SALARY",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "DEPOSIT",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "PAYMENT",
+                                ignoreCase = true
+                            ) -> Icons.Default.Check
+
+                            transaction.description.contains(
+                                "UTILITY",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "ELEC",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "POWER",
+                                ignoreCase = true
+                            ) -> Icons.Default.Star
+
+                            transaction.description.contains(
+                                "RESTAURANT",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "GRILL",
+                                ignoreCase = true
+                            ) || transaction.description.contains(
+                                "FOOD",
+                                ignoreCase = true
+                            ) -> Icons.Default.Person
+
                             isCredit -> Icons.Default.Add
                             else -> Icons.Default.KeyboardArrowDown
                         }
-                        
+
                         Icon(
                             imageVector = iconVector,
                             contentDescription = null,
@@ -832,12 +1096,18 @@ fun TransactionRow(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(if (transaction.status == "POSTED") Color(0xFFF1F3F9) else Color(0xFFD6E3FF))
+                                    .background(
+                                        if (transaction.status == "POSTED") Color(0xFFF1F3F9) else Color(
+                                            0xFFD6E3FF
+                                        )
+                                    )
                                     .padding(horizontal = 4.dp, vertical = 1.dp)
                             ) {
                                 Text(
                                     text = transaction.status,
-                                    color = if (transaction.status == "POSTED") Color(0xFF44474E) else Color(0xFF001B3E),
+                                    color = if (transaction.status == "POSTED") Color(0xFF44474E) else Color(
+                                        0xFF001B3E
+                                    ),
                                     fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -854,7 +1124,9 @@ fun TransactionRow(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = formatDate(transaction.postingDate ?: transaction.transactionDate ?: ""),
+                        text = formatDate(
+                            transaction.postingDate ?: transaction.transactionDate ?: ""
+                        ),
                         color = textMuted,
                         fontSize = 10.sp
                     )
@@ -919,18 +1191,32 @@ fun EmptyStateView(
             Row {
                 Button(
                     onClick = onOpenSettings,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1E2E9), contentColor = textPrimary)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE1E2E9),
+                        contentColor = textPrimary
+                    )
                 ) {
-                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("API Setup")
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Button(
                     onClick = onRefresh,
-                    colors = ButtonDefaults.buttonColors(containerColor = accentOnContainer, contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentOnContainer,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Sync Sandbox Now")
                 }
