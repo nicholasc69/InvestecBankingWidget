@@ -11,13 +11,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.ai.BankingToolSet
 import com.example.data.ai.LiteRtEngineManager
 import com.example.data.repository.BankRepository
-import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
-import com.google.ai.edge.litertlm.EngineConfig
-import com.google.ai.edge.litertlm.LogSeverity
 import com.google.ai.edge.litertlm.tool
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers

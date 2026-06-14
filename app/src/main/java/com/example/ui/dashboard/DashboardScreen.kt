@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
@@ -93,6 +92,7 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -368,8 +368,7 @@ fun DashboardScreen(
                             if (selectedAccount != null) {
                                 item {
                                     BalanceDetailedMetricsCard(
-                                        account = selectedAccount,
-                                        accentColor = accentOnContainer
+                                        account = selectedAccount
                                     )
                                 }
 
@@ -454,9 +453,7 @@ fun DashboardScreen(
                                     items(transactions) { tx ->
                                         TransactionRow(
                                             transaction = tx,
-                                            currencySymbol = getCurrencySymbol(selectedAccount.currency),
-                                            accentTeal = greenCredit,
-                                            accentRed = redDebit
+                                            currencySymbol = getCurrencySymbol(selectedAccount.currency)
                                         )
                                     }
                                 }
@@ -819,8 +816,7 @@ fun BankAccountGlossyCard(
 
 @Composable
 fun BalanceDetailedMetricsCard(
-    account: BankAccountEntity,
-    accentColor: Color
+    account: BankAccountEntity
 ) {
     val df = DecimalFormat("#,##0.00")
     val symbol = getCurrencySymbol(account.currency)
@@ -941,7 +937,7 @@ fun BalanceDetailedMetricsCard(
             HorizontalDivider(color = Color(0xFFE1E2E9))
             Spacer(modifier = Modifier.height(12.dp))
 
-            val timeStr = SimpleDateFormat("HH:mm:ss, dd MMM yyyy", Locale.getDefault())
+            val timeStr = SimpleDateFormat("HH:mm:ss, dd MMM yyyy", LocalLocale.current.platformLocale)
                 .format(Date(account.lastUpdated))
 
             Row(
@@ -966,9 +962,7 @@ fun BalanceDetailedMetricsCard(
 @Composable
 fun TransactionRow(
     transaction: TransactionEntity,
-    currencySymbol: String,
-    accentTeal: Color,
-    accentRed: Color
+    currencySymbol: String
 ) {
     val df = DecimalFormat("#,##0.00")
     val isCredit = transaction.type.equals("CREDIT", ignoreCase = true)

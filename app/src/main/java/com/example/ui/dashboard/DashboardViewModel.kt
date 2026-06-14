@@ -51,11 +51,9 @@ class DashboardViewModel @Inject constructor(
 
     // Currently selected profile ID
     private val _selectedProfileId = MutableStateFlow<String?>(null)
-    val selectedProfileId: StateFlow<String?> = _selectedProfileId.asStateFlow()
 
     // Currently selected account ID
     private val _selectedAccountId = MutableStateFlow<String?>(null)
-    val selectedAccountId: StateFlow<String?> = _selectedAccountId.asStateFlow()
 
     // Sync activity indicators
     private val _isRefreshing = MutableStateFlow(false)

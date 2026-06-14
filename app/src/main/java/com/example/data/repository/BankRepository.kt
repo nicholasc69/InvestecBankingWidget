@@ -26,8 +26,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -263,6 +265,14 @@ class BankRepository @Inject constructor(
                         )
                     }
             context.sendBroadcast(intent)
+        }
+
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            try {
+                com.example.receiver.BankGlanceWidget().updateAll(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating Glance widget: ${e.message}", e)
+            }
         }
     }
 

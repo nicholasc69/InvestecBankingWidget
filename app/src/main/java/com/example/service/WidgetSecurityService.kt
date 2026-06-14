@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
+import kotlinx.coroutines.launch
+import androidx.glance.appwidget.updateAll
+import androidx.core.content.edit
 
 class WidgetSecurityService : Service() {
 
@@ -19,12 +22,12 @@ class WidgetSecurityService : Service() {
         Log.d("WidgetSecurityService", "onTaskRemoved called - App swiped away from recents")
         
         // Lock the widget immediately
-        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("widget_unlocked", false)
-            .putLong("last_authenticated_time", 0L)
-            .apply()
-            
+        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
+        prefs.edit {
+            putBoolean("widget_unlocked", false)
+                .putLong("last_authenticated_time", 0L)
+        }
+
         // Trigger widget update to show the locked screen immediately
         val updateIntent = Intent(this, com.example.receiver.BankWidgetProvider::class.java).apply {
             action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
@@ -33,6 +36,14 @@ class WidgetSecurityService : Service() {
             putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
         }
         sendBroadcast(updateIntent)
+
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
+            } catch (e: Exception) {
+                Log.e("WidgetSecurityService", "Error updating Glance widget: ${e.message}", e)
+            }
+        }
         
         stopSelf()
     }

@@ -1,5 +1,6 @@
 package com.example.ui.chat
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -140,7 +140,7 @@ fun ChatScreen(
                     value = inputText,
                     onValueChange = { viewModel.onInputTextChanged(it) },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Type a message...", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) },
+                    placeholder = { Text("Type a message...", color = textPrimary) },
                     enabled = !viewModel.isInitializing,
                     shape = RoundedCornerShape(24.dp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -169,9 +169,13 @@ fun ChatScreen(
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = accentContainer,
                         contentColor = accentOnContainer
+                    ),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = accentOnContainer
                     )
                 ) {
-                    Text("Send", fontWeight = FontWeight.Bold)
+                    Text("Send", fontWeight = FontWeight.Bold, color = textPrimary)
                 }
             }
         }

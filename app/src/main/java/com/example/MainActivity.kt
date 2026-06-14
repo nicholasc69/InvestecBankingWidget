@@ -1,7 +1,6 @@
 package com.example
 
 import android.os.Bundle
-import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.app.AlarmManager
@@ -9,6 +8,8 @@ import android.app.PendingIntent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.launch
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
@@ -53,6 +54,7 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.data.ai.LiteRtEngineManager
 import javax.inject.Inject
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.core.content.edit
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
@@ -71,7 +73,7 @@ class MainActivity : FragmentActivity() {
 
                 LaunchedEffect(authenticated) {
                     if (!authenticated) {
-                        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
+                        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
                         val widgetUnlocked = prefs.getBoolean("widget_unlocked", false)
                         val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
                         val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
@@ -131,7 +133,7 @@ class MainActivity : FragmentActivity() {
                                 item(
                                     icon = {
                                         val painter = if (destination.iconRes != null) {
-                                            androidx.compose.ui.res.painterResource(destination.iconRes)
+                                            painterResource(destination.iconRes)
                                         } else {
                                             androidx.compose.ui.graphics.vector.rememberVectorPainter(destination.iconVector!!)
                                         }
@@ -186,13 +188,12 @@ class MainActivity : FragmentActivity() {
         isAppAuthenticated.value = false
         
         // Refresh the authentication timestamp upon leaving the app to give a full 5 seconds of visibility
-        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
         if (prefs.getBoolean("widget_unlocked", false)) {
-            prefs.edit().putLong("last_authenticated_time", System.currentTimeMillis()).apply()
+            prefs.edit {putLong("last_authenticated_time", System.currentTimeMillis())}
             scheduleWidgetLockAlarm()
         }
     }
-
 
 
     private fun showBiometricPrompt(onSuccess: () -> Unit) {
@@ -228,29 +229,29 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun unlockApplicationAndWidget() {
-        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("widget_unlocked", true)
-            .putLong("last_authenticated_time", System.currentTimeMillis())
-            .apply()
+        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
+        prefs.edit {
+                putBoolean("widget_unlocked", true)
+                .putLong("last_authenticated_time", System.currentTimeMillis())
+        }
         triggerWidgetUpdate()
     }
 
     private fun lockApplicationAndWidget() {
-        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("widget_unlocked", false)
-            .putLong("last_authenticated_time", 0L)
-            .apply()
+        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
+        prefs.edit {
+                putBoolean("widget_unlocked", false)
+                .putLong("last_authenticated_time", 0L)
+        }
         cancelWidgetLockAlarm()
         triggerWidgetUpdate()
     }
 
     private fun scheduleWidgetLockAlarm() {
-        val prefs = getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
         val isUnlocked = prefs.getBoolean("widget_unlocked", false)
         if (isUnlocked) {
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
             val intent = Intent(this, com.example.receiver.BankWidgetProvider::class.java).apply {
                 action = "com.example.receiver.ACTION_LOCK_WIDGET"
             }
@@ -261,13 +262,36 @@ class MainActivity : FragmentActivity() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val triggerTime = System.currentTimeMillis() + 5_000 // 5 seconds
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-            Log.d("MainActivity", "Scheduled widget lock alarm for 5 seconds from now")
+
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                        Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
+                    } else {
+                        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                        Log.d("MainActivity", "Scheduled inexact allow-while-idle widget lock alarm for 5 seconds from now")
+                    }
+                } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
+                }
+            } catch (e: SecurityException) {
+                Log.w("MainActivity", "SecurityException scheduling exact alarm, falling back", e)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                } else {
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                }
+            }
         }
     }
 
     private fun cancelWidgetLockAlarm() {
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, com.example.receiver.BankWidgetProvider::class.java).apply {
             action = "com.example.receiver.ACTION_LOCK_WIDGET"
         }
@@ -289,6 +313,14 @@ class MainActivity : FragmentActivity() {
             putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
         }
         sendBroadcast(intent)
+
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error updating Glance widget: ${e.message}", e)
+            }
+        }
     }
 }
 
