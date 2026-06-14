@@ -63,22 +63,27 @@ class MainActivity : FragmentActivity() {
     lateinit var engineManager: LiteRtEngineManager
 
     private val isAppAuthenticated = mutableStateOf(false)
+    private val authTrigger = mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
+            authTrigger.value += 1
+        }
         setContent {
             MyApplicationTheme {
                 val authenticated by isAppAuthenticated
 
-                LaunchedEffect(authenticated) {
+                LaunchedEffect(authenticated, authTrigger.value) {
                     if (!authenticated) {
                         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
                         val widgetUnlocked = prefs.getBoolean("widget_unlocked", false)
                         val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
                         val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
+                        val forceAuth = intent.getBooleanExtra("JUST_AUTHENTICATE", false)
 
-                        if (widgetUnlocked && isRecent) {
+                        if (widgetUnlocked && isRecent && !forceAuth) {
                             isAppAuthenticated.value = true
                         } else {
                             showBiometricPrompt {
@@ -166,6 +171,9 @@ class MainActivity : FragmentActivity() {
                         showBiometricPrompt {
                             isAppAuthenticated.value = true
                             unlockApplicationAndWidget()
+                            if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
+                                finish()
+                            }
                         }
                     })
                 }
@@ -176,6 +184,10 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
+            isAppAuthenticated.value = false
+            authTrigger.value += 1
+        }
     }
 
     override fun onStart() {
@@ -190,7 +202,7 @@ class MainActivity : FragmentActivity() {
         // Refresh the authentication timestamp upon leaving the app to give a full 5 seconds of visibility
         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
         if (prefs.getBoolean("widget_unlocked", false)) {
-            prefs.edit {putLong("last_authenticated_time", System.currentTimeMillis())}
+            prefs.edit(commit = true) {putLong("last_authenticated_time", System.currentTimeMillis())}
             scheduleWidgetLockAlarm()
         }
     }
@@ -198,23 +210,29 @@ class MainActivity : FragmentActivity() {
 
     private fun showBiometricPrompt(onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(this)
+        var authSucceeded = false
         val biometricPrompt = BiometricPrompt(this, executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
                     Log.e("MainActivity", "Authentication error: $errString ($errorCode)")
-                    lockApplicationAndWidget()
+                    if (!authSucceeded) {
+                        lockApplicationAndWidget()
+                    }
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
+                    authSucceeded = true
                     onSuccess()
                 }
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     Log.d("MainActivity", "Authentication failed")
-                    lockApplicationAndWidget()
+                    if (!authSucceeded) {
+                        lockApplicationAndWidget()
+                    }
                 }
             })
 
@@ -230,18 +248,18 @@ class MainActivity : FragmentActivity() {
 
     private fun unlockApplicationAndWidget() {
         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
-        prefs.edit {
-                putBoolean("widget_unlocked", true)
-                .putLong("last_authenticated_time", System.currentTimeMillis())
+        prefs.edit(commit = true) {
+            putBoolean("widget_unlocked", true)
+            .putLong("last_authenticated_time", System.currentTimeMillis())
         }
         triggerWidgetUpdate()
     }
 
     private fun lockApplicationAndWidget() {
         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
-        prefs.edit {
-                putBoolean("widget_unlocked", false)
-                .putLong("last_authenticated_time", 0L)
+        prefs.edit(commit = true) {
+            putBoolean("widget_unlocked", false)
+            .putLong("last_authenticated_time", 0L)
         }
         cancelWidgetLockAlarm()
         triggerWidgetUpdate()

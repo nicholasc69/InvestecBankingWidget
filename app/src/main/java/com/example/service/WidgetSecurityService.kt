@@ -23,7 +23,7 @@ class WidgetSecurityService : Service() {
         
         // Lock the widget immediately
         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
-        prefs.edit {
+        prefs.edit(commit = true) {
             putBoolean("widget_unlocked", false)
                 .putLong("last_authenticated_time", 0L)
         }

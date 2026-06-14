@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,7 +38,6 @@ import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
-import androidx.compose.ui.platform.LocalLocale
 import androidx.core.content.edit
 
 class BankWidgetProvider : GlanceAppWidgetReceiver() {
@@ -51,19 +53,24 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
         Log.d(TAG, "onReceive triggered action: ${intent.action}")
         if (intent.action == ACTION_LOCK_WIDGET || intent.action == Intent.ACTION_USER_PRESENT) {
             val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
-            prefs.edit {
-                putBoolean("widget_unlocked", false)
-                    .putLong("last_authenticated_time", 0L)
-            }
+            val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
+            val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
 
-            val pendingResult = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    BankGlanceWidget().updateAll(context)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error updating glance widget: ${e.message}", e)
-                } finally {
-                    pendingResult.finish()
+            if (intent.action == ACTION_LOCK_WIDGET || !isRecent) {
+                prefs.edit(commit = true) {
+                    putBoolean("widget_unlocked", false)
+                        .putLong("last_authenticated_time", 0L)
+                }
+
+                val pendingResult = goAsync()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        BankGlanceWidget().updateAll(context)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error updating glance widget: ${e.message}", e)
+                    } finally {
+                        pendingResult.finish()
+                    }
                 }
             }
         }
@@ -85,7 +92,7 @@ class BankGlanceWidget : GlanceAppWidget() {
             val isUnlocked = prefs.getBoolean("widget_unlocked", false)
             val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
             val currentTime = System.currentTimeMillis()
-            val isExpired = (currentTime - lastAuthTime) > 5_000
+            val isExpired = (currentTime - lastAuthTime) > 10_000
 
             val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
             val isKeyguardLocked = keyguardManager.isKeyguardLocked
@@ -166,7 +173,7 @@ fun BankWidgetContent(
                     verticalAlignment = Alignment.Vertical.CenterVertically
                 ) {
                     Text(
-                        text = "INVESTEC PRIVATE BANKING",
+                        text = "Investec Private Banking",
                         style = TextStyle(
                             color = ColorProvider(Color(0xFF001B3E)),
                             fontSize = 10.sp,
@@ -175,7 +182,7 @@ fun BankWidgetContent(
                     )
                     Spacer(modifier = GlanceModifier.defaultWeight())
                     val syncTime = if (account != null) {
-                        SimpleDateFormat("HH:mm", LocalLocale.current.platformLocale).format(Date(account.lastUpdated))
+                        SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(Date(account.lastUpdated))
                     } else {
                         "--:--"
                     }
