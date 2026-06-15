@@ -92,7 +92,7 @@ class BankGlanceWidget : GlanceAppWidget() {
             val isUnlocked = prefs.getBoolean("widget_unlocked", false)
             val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
             val currentTime = System.currentTimeMillis()
-            val isExpired = (currentTime - lastAuthTime) > 10_000
+            val isExpired = (currentTime - lastAuthTime) > 5_000
 
             val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
             val isKeyguardLocked = keyguardManager.isKeyguardLocked
