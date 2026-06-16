@@ -1,6 +1,9 @@
 package com.example.data.repository
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
@@ -30,8 +33,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import androidx.glance.appwidget.updateAll
+import com.example.receiver.BankGlanceWidget
+import io.github.cdimascio.dotenv.Dotenv
+import io.github.cdimascio.dotenv.dotenv
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,10 +57,11 @@ class BankRepository @Inject constructor(
         private const val TAG = "BankRepository"
 
         // Sandbox keys from Investec OpenAPI Documentation
-        const val DEFAULT_SANDBOX_CLIENT_ID = "yAxzQRFX97vOcyQAwluEU6H6ePxMA5eY"
-        const val DEFAULT_SANDBOX_SECRET = "4dY0PjEYqoBrZ99r"
-        const val DEFAULT_SANDBOX_API_KEY =
-            "eUF4elFSRlg5N3ZPY3lRQXdsdUVVNkg2ZVB4TUE1ZVk6YVc1MlpYTjBaV010ZW1FdGNHSXRZV05qYjNWdWRITXRjMkZ1WkdKdmVBPT0="
+
+        private val dotenv = dotenv()
+        val DEFAULT_SANDBOX_CLIENT_ID: String? = dotenv["CLIENT_ID"]
+        val DEFAULT_SANDBOX_SECRET: String? = dotenv["CLIENT_SECRET"]
+        val DEFAULT_SANDBOX_API_KEY: String? =dotenv["API_KEY"]
 
         const val BASE_URL_SANDBOX = "https://openapisandbox.investec.com"
         const val BASE_URL_PRODUCTION = "https://openapi.investec.com"
@@ -97,14 +107,14 @@ class BankRepository @Inject constructor(
 
     // Resolves current active credentials based on configuration
     suspend fun getActiveCredentials(): Triple<String, String, String> {
-        return if (useSandbox()) {
+        return (if (useSandbox()) {
             val cid = getClientId().ifEmpty { DEFAULT_SANDBOX_CLIENT_ID }
             val sec = getClientSecret().ifEmpty { DEFAULT_SANDBOX_SECRET }
             val key = getApiKey().ifEmpty { DEFAULT_SANDBOX_API_KEY }
             Triple(cid, sec, key)
         } else {
             Triple(getClientId(), getClientSecret(), getApiKey())
-        }
+        }) as Triple<String, String, String>
     }
 
     suspend fun getActiveBaseUrl(): String {
@@ -183,8 +193,8 @@ class BankRepository @Inject constructor(
 
                     // Fetch transactions in parallel (from 3 months ago to today)
                     try {
-                        val toDateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-                        val fromDateStr = java.time.LocalDate.now().minusMonths(3).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                        val toDateStr = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        val fromDateStr = LocalDate.now().minusMonths(3).format(DateTimeFormatter.ISO_LOCAL_DATE)
 
                         val txResult = dynamicService.getAccountTransactions(
                             bearerToken = bearerToken,
@@ -250,26 +260,26 @@ class BankRepository @Inject constructor(
     }
 
     private fun triggerWidgetUpdate(context: Context) {
-        val appWidgetManager = android.appwidget.AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName =
-            android.content.ComponentName(context, "com.example.receiver.BankWidgetProvider")
+            ComponentName(context, "com.example.receiver.BankWidgetProvider")
         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
         if (appWidgetIds.isNotEmpty()) {
             val intent =
-                android.content.Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
                     .apply {
                         component = componentName
                         putExtra(
-                            android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS,
+                            AppWidgetManager.EXTRA_APPWIDGET_IDS,
                             appWidgetIds
                         )
                     }
             context.sendBroadcast(intent)
         }
 
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
-                com.example.receiver.BankGlanceWidget().updateAll(context)
+                BankGlanceWidget().updateAll(context)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating Glance widget: ${e.message}", e)
             }

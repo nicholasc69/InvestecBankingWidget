@@ -109,7 +109,7 @@ class BankGlanceWidget : GlanceAppWidget() {
     }
 }
 
-@SuppressLint("RestrictedApi")
+@SuppressLint("RestrictedApi", "NonObservableLocale")
 @Composable
 fun BankWidgetContent(
     context: Context,

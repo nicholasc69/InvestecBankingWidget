@@ -667,7 +667,7 @@ fun CredentialsSettingsForm(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Client ID: ${BankRepository.DEFAULT_SANDBOX_CLIENT_ID.take(12)}...",
+                            "Client ID: ${BankRepository.DEFAULT_SANDBOX_CLIENT_ID?.take(12)}...",
                             color = textPrimary,
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace

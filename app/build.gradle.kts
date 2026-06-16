@@ -67,7 +67,7 @@ android {
 // to match the convention used in Web projects.
 secrets {
     propertiesFileName = ".env"
-    defaultPropertiesFileName = ".env.example"
+    defaultPropertiesFileName = ".env"
 }
 
 // Some unused dependencies are commented out below instead of being removed.
@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    implementation(libs.dotenv)
 
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.core)

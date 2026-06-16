@@ -36,7 +36,7 @@ firebaseBom = "34.14.1"
 secretsGradlePlugin = "2.0.1"
 litertlm = "0.13.1"
 glance = "1.1.1"
-
+dotenv = "6.4.1"
 biometric = "1.1.0"
 
 [libraries]
@@ -88,7 +88,7 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 litertlm = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
-
+dotenv = {group = "io.github.cdimascio", name = "dotenv-kotlin", version.ref = "dotenv"}
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
