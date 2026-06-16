@@ -89,9 +89,6 @@ class MainActivity : FragmentActivity() {
                             showBiometricPrompt {
                                 isAppAuthenticated.value = true
                                 unlockApplicationAndWidget()
-                                if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
-                                    finish()
-                                }
                             }
                         }
                     }
@@ -171,9 +168,6 @@ class MainActivity : FragmentActivity() {
                         showBiometricPrompt {
                             isAppAuthenticated.value = true
                             unlockApplicationAndWidget()
-                            if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
-                                finish()
-                            }
                         }
                     })
                 }
