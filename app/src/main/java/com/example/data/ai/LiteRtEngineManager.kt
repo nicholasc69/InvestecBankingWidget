@@ -41,6 +41,7 @@ class LiteRtEngineManager @Inject constructor(
             val config = EngineConfig(
                 modelPath = "/data/local/tmp/gemma-4-E2B-it.litertlm",
                 backend = Backend.CPU(numOfThreads = 4),
+//                backend = Backend.GPU(),
                 cacheDir = context.cacheDir.absolutePath
             )
             val newEngine = Engine(config)

@@ -319,20 +319,9 @@ class MainActivity : FragmentActivity() {
 
     private fun triggerWidgetUpdate() {
         val intent = Intent(this, com.example.receiver.BankWidgetProvider::class.java).apply {
-            action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            val ids = android.appwidget.AppWidgetManager.getInstance(application)
-                .getAppWidgetIds(android.content.ComponentName(application, com.example.receiver.BankWidgetProvider::class.java))
-            putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            action = com.example.receiver.BankWidgetProvider.ACTION_UNLOCK_WIDGET
         }
         sendBroadcast(intent)
-
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            try {
-                com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error updating Glance widget: ${e.message}", e)
-            }
-        }
     }
 }
 

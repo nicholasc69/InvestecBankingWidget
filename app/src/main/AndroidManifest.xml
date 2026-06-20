@@ -27,6 +27,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WidgetUnlockActivity"
+            android:exported="false"
+            android:theme="@style/Theme.WidgetUnlock"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
         <receiver
             android:name=".receiver.BankWidgetProvider"
             android:exported="true">
@@ -34,6 +43,7 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.USER_PRESENT" />
                 <action android:name="com.example.receiver.ACTION_LOCK_WIDGET" />
+                <action android:name="com.example.receiver.ACTION_UNLOCK_WIDGET" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

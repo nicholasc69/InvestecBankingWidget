@@ -28,12 +28,14 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.MainActivity
+import com.example.WidgetUnlockActivity
 import com.example.R
 import com.example.data.local.BankDatabase
 import com.example.data.model.BankAccountEntity
 import com.example.data.model.TransactionEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -46,11 +48,28 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
     companion object {
         private const val TAG = "BankWidgetProvider"
         const val ACTION_LOCK_WIDGET = "com.example.receiver.ACTION_LOCK_WIDGET"
+        const val ACTION_UNLOCK_WIDGET = "com.example.receiver.ACTION_UNLOCK_WIDGET"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         Log.d(TAG, "onReceive triggered action: ${intent.action}")
+        
+        if (intent.action == ACTION_UNLOCK_WIDGET) {
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    BankGlanceWidget().updateAll(context)
+                    delay(2000)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating glance widget on unlock: ${e.message}", e)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
         if (intent.action == ACTION_LOCK_WIDGET || intent.action == Intent.ACTION_USER_PRESENT) {
             val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
             val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
@@ -66,8 +85,9 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         BankGlanceWidget().updateAll(context)
+                        delay(2000)
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error updating glance widget: ${e.message}", e)
+                        Log.e(TAG, "Error updating glance widget on lock: ${e.message}", e)
                     } finally {
                         pendingResult.finish()
                     }
@@ -99,6 +119,8 @@ class BankGlanceWidget : GlanceAppWidget() {
 
             val showUnlocked = isUnlocked && !isExpired && !isKeyguardLocked
 
+            Log.d("BankGlanceWidget", "isUnlocked: $isUnlocked, lastAuthTime: $lastAuthTime, currentTime: $currentTime, isExpired: $isExpired, isKeyguardLocked: $isKeyguardLocked, showUnlocked: $showUnlocked")
+
             BankWidgetContent(
                 context = context,
                 showUnlocked = showUnlocked,
@@ -117,22 +139,24 @@ fun BankWidgetContent(
     account: BankAccountEntity?,
     transactions: List<TransactionEntity>
 ) {
-    val openAppIntent = Intent(context, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        if (!showUnlocked) {
-            action = "com.example.action.AUTHENTICATE_WIDGET"
-            putExtra("JUST_AUTHENTICATE", true)
-        } else {
-            action = "com.example.action.OPEN_APP"
+    val modifier = if (!showUnlocked) {
+        val unlockIntent = Intent(context, WidgetUnlockActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-    }
-
-    Box(
-        modifier = GlanceModifier
+        GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.widget_background))
             .padding(12.dp)
-            .clickable(actionStartActivity(openAppIntent))
+            .clickable(actionStartActivity(unlockIntent))
+    } else {
+        GlanceModifier
+            .fillMaxSize()
+            .background(ImageProvider(R.drawable.widget_background))
+            .padding(12.dp)
+    }
+
+    Box(
+        modifier = modifier
     ) {
         if (!showUnlocked) {
             Column(

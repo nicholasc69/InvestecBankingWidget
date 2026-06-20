@@ -156,6 +156,7 @@ fun ChatScreen(
                         unfocusedBorderColor = Color(0xFFC4C6D0),
                         focusedContainerColor = Color(0xFFFDFBFF),
                         unfocusedContainerColor = Color(0xFFFDFBFF),
+                        focusedTextColor = Color.Black
                     )
                 )
                 Button(

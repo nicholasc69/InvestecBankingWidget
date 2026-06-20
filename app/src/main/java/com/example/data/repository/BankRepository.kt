@@ -34,8 +34,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import androidx.glance.appwidget.updateAll
 import com.example.receiver.BankGlanceWidget
-import io.github.cdimascio.dotenv.Dotenv
-import io.github.cdimascio.dotenv.dotenv
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -56,12 +54,9 @@ class BankRepository @Inject constructor(
     companion object {
         private const val TAG = "BankRepository"
 
-        // Sandbox keys from Investec OpenAPI Documentation
-
-        private val dotenv = dotenv()
-        val DEFAULT_SANDBOX_CLIENT_ID: String? = dotenv["CLIENT_ID"]
-        val DEFAULT_SANDBOX_SECRET: String? = dotenv["CLIENT_SECRET"]
-        val DEFAULT_SANDBOX_API_KEY: String? =dotenv["API_KEY"]
+        val DEFAULT_SANDBOX_CLIENT_ID: String? = com.example.BuildConfig.CLIENT_ID
+        val DEFAULT_SANDBOX_SECRET: String? = com.example.BuildConfig.CLIENT_SECRET
+        val DEFAULT_SANDBOX_API_KEY: String? = com.example.BuildConfig.API_KEY
 
         const val BASE_URL_SANDBOX = "https://openapisandbox.investec.com"
         const val BASE_URL_PRODUCTION = "https://openapi.investec.com"
