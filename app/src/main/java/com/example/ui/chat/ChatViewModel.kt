@@ -32,6 +32,7 @@ class ChatViewModel @Inject constructor(
     private val systemPrompt = """
         ROLE AND PURPOSE:
         You are Alex, a helpful financial assistant for Investec Private Banking.
+        You only have access to and must only return data for the currently selected profile. The tools you use automatically filter all bank accounts and transaction details to the selected profile.
         You have access to tools that allow you to view account balances, recent transactions, all transactions, and synchronize data.
 
         TOOL USE GUIDELINES:
@@ -42,23 +43,21 @@ class ChatViewModel @Inject constructor(
         5. If the user asks to see recent transactions across all accounts, or does not specify which account to check, use 'getRecentTransactions' with accountId set to 'ALL'.
         6. If the user asks to see all transactions (not just recent ones) for an account or across all accounts, use 'getAllTransactions' (passing the specific accountId, or 'ALL' if not specified / across all accounts).
 
-        CRITICAL FORMATTING RULES:
-        1. ABSOLUTELY NO ASTERISKS: Do NOT use the asterisk (*) character under any circumstances. Never output '*' or '**' for bullet points or bold text.
-        2. LISTS: Use hyphens (-) or numbers (1., 2.) for lists. Do NOT use asterisks.
-        3. HEADINGS: Use ALL CAPS for headers and section titles (e.g. "BALANCE SUMMARY:") to highlight text, as markdown bolding using asterisks is strictly forbidden.
-        4. CLEAR PRESENTATION: Always present financial data clearly and conversationally. Avoid using markdown tables (such as |:---| structures) or database-style notation.
+        FORMATTING RULES:
+        1. MARKDOWN SUPPORT: Use standard Markdown for formatting. Use double asterisks (**) to make headers, account names, and amounts bold. Use asterisks (*) or hyphens (-) for bulleted list items.
+        2. CLEAR PRESENTATION: Always present financial data clearly and conversationally. Avoid using markdown tables (such as |:---| structures) or database-style notation.
 
         EXAMPLES OF CORRECT FORMATTING:
         
         Example 1 (Balances):
-        BALANCE SUMMARY
-        - Private Bank Account: R 45,000.00
-        - Savings Account: R 120,500.00
+        **BALANCE SUMMARY**
+        * Private Bank Account: **R 45,000.00**
+        * Savings Account: **R 120,500.00**
         
         Example 2 (Transactions):
-        RECENT TRANSACTIONS
-        1. 2026-06-18: Coffee Shop - R 45.00
-        2. 2026-06-17: Supermarket - R 350.00
+        **RECENT TRANSACTIONS**
+        1. 2026-06-18: Coffee Shop - **R 45.00**
+        2. 2026-06-17: Supermarket - **R 350.00**
     """.trimIndent()
 
     val messages = mutableStateListOf<Message>()
@@ -137,10 +136,9 @@ class ChatViewModel @Inject constructor(
                 var fullResponse = ""
                 withContext(Dispatchers.IO) {
                     currentConversation.sendMessageAsync(query).collect { token ->
-                        // Clean up any asterisks in case the model outputs them despite instructions
-                        val cleanToken = token.toString().replace("*", "")
+                        val cleanToken = token.toString()
                         fullResponse += cleanToken
-                        Log.d("ChatViewModel", "Token: '$cleanToken' (original: '$token')")
+                        Log.d("ChatViewModel", "Token: '$cleanToken'")
                         withContext(Dispatchers.Main) {
                             if (botMessageIndex < messages.size) {
                                 messages[botMessageIndex] =

@@ -16,7 +16,13 @@ class BankingToolSet(val repository: BankRepository) : ToolSet {
 
     @Tool(description = "Get a list of all bank accounts including their balances and available funds.")
     fun getAllAccounts(): String = runBlocking {
-        val accounts = repository.getAccounts()
+        val allAccounts = repository.getAccounts()
+        val selectedProfileId = repository.getSelectedProfileId() ?: allAccounts.firstOrNull()?.profileId
+        val accounts = if (selectedProfileId != null) {
+            allAccounts.filter { it.profileId == selectedProfileId }
+        } else {
+            emptyList()
+        }
         val type = Types.newParameterizedType(List::class.java, BankAccountEntity::class.java)
         moshi.adapter<List<BankAccountEntity>>(type).toJson(accounts)
     }
@@ -26,11 +32,27 @@ class BankingToolSet(val repository: BankRepository) : ToolSet {
         @ToolParam(description = "The unique ID of the account, or 'ALL' to retrieve recent transactions across all accounts.")
         accountId: String
     ): String = runBlocking {
-        val txs = if (accountId == "ALL") {
-            val accounts = repository.getAccounts()
-            repository.getLastFiveTransactionsForAccounts(accounts.map { it.accountId })
+        val allAccounts = repository.getAccounts()
+        val selectedProfileId = repository.getSelectedProfileId() ?: allAccounts.firstOrNull()?.profileId
+        val profileAccounts = if (selectedProfileId != null) {
+            allAccounts.filter { it.profileId == selectedProfileId }
         } else {
-            repository.getLastFiveTransactions(accountId)
+            emptyList()
+        }
+        val profileAccountIds = profileAccounts.map { it.accountId }
+
+        val txs = if (accountId == "ALL") {
+            if (profileAccountIds.isNotEmpty()) {
+                repository.getLastFiveTransactionsForAccounts(profileAccountIds)
+            } else {
+                emptyList()
+            }
+        } else {
+            if (profileAccountIds.contains(accountId)) {
+                repository.getLastFiveTransactions(accountId)
+            } else {
+                emptyList()
+            }
         }
         val type = Types.newParameterizedType(List::class.java, TransactionEntity::class.java)
         moshi.adapter<List<TransactionEntity>>(type).toJson(txs)
@@ -41,11 +63,27 @@ class BankingToolSet(val repository: BankRepository) : ToolSet {
         @ToolParam(description = "The unique ID of the account, or 'ALL' to retrieve transactions across all accounts.")
         accountId: String
     ): String = runBlocking {
-        val txs = if (accountId == "ALL") {
-            val accounts = repository.getAccounts()
-            repository.getAllTransactionsForAccounts(accounts.map { it.accountId })
+        val allAccounts = repository.getAccounts()
+        val selectedProfileId = repository.getSelectedProfileId() ?: allAccounts.firstOrNull()?.profileId
+        val profileAccounts = if (selectedProfileId != null) {
+            allAccounts.filter { it.profileId == selectedProfileId }
         } else {
-            repository.getAllTransactions(accountId)
+            emptyList()
+        }
+        val profileAccountIds = profileAccounts.map { it.accountId }
+
+        val txs = if (accountId == "ALL") {
+            if (profileAccountIds.isNotEmpty()) {
+                repository.getAllTransactionsForAccounts(profileAccountIds)
+            } else {
+                emptyList()
+            }
+        } else {
+            if (profileAccountIds.contains(accountId)) {
+                repository.getAllTransactions(accountId)
+            } else {
+                emptyList()
+            }
         }
         val type = Types.newParameterizedType(List::class.java, TransactionEntity::class.java)
         moshi.adapter<List<TransactionEntity>>(type).toJson(txs)

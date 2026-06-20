@@ -34,6 +34,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -183,6 +187,63 @@ fun ChatScreen(
     }
 }
 
+fun parseMarkdown(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        var i = 0
+        val len = text.length
+        while (i < len) {
+            when {
+                text.startsWith("**", i) -> {
+                    val end = text.indexOf("**", i + 2)
+                    if (end != -1) {
+                        pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+                        append(text.substring(i + 2, end))
+                        pop()
+                        i = end + 2
+                    } else {
+                        append("**")
+                        i += 2
+                    }
+                }
+                text.startsWith("*", i) -> {
+                    val isBullet = (i == 0 || text[i - 1] == '\n') && i + 1 < len && text[i + 1] == ' '
+                    if (isBullet) {
+                        append("•")
+                        i += 1
+                    } else {
+                        val end = text.indexOf("*", i + 1)
+                        if (end != -1) {
+                            pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
+                            append(text.substring(i + 1, end))
+                            pop()
+                            i = end + 1
+                        } else {
+                            append("*")
+                            i += 1
+                        }
+                    }
+                }
+                text.startsWith("_", i) -> {
+                    val end = text.indexOf("_", i + 1)
+                    if (end != -1) {
+                        pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
+                        append(text.substring(i + 1, end))
+                        pop()
+                        i = end + 1
+                    } else {
+                        append("_")
+                        i += 1
+                    }
+                }
+                else -> {
+                    append(text[i])
+                    i++
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ChatBubble(message: Message) {
     val alignment = when {
@@ -211,7 +272,7 @@ fun ChatBubble(message: Message) {
             tonalElevation = if (message.isSystem) 0.dp else 2.dp
         ) {
             Text(
-                text = message.text,
+                text = parseMarkdown(message.text),
                 modifier = Modifier.padding(12.dp),
                 style = if (message.isSystem) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
                 color = textColor
