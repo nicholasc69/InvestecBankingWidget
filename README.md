@@ -1,17 +1,11 @@
 # Zebra Alex - Investec Private Banking AI Assistant App & Balance/Transactions Widget 
 
 An offline-first Android application and Home Screen Widget for Investec Private Banking. It integrates secure local database caching, biometric security, a Jetpack Glance home screen widget, and an on-device AI assistant ("Alex") powered by Google LiteRT (formerly TensorFlow Lite) using Gemma.
-<div class="row">
-  <div class="col">
-    <img src="./images/image1.jpg" height="30%" width="30%">
-  </div>
-  <div class="col">
-    <img src="./images/image2.jpg" height="30%" width="30%">
-  </div>
-  <div class="col">
-    <img src="./images/image3.jpg" height="30%" width="30%">
-  </div>
-</div>
+<p align="center">
+  <img src="./images/image1.jpg" width="32%">
+  <img src="./images/image2.jpg" width="32%">
+  <img src="./images/image3.jpg" width="32%">
+</p>
 
 
 
