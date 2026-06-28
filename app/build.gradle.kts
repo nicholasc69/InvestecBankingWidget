@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example"
-        minSdk = 35
+        minSdk = 36
         //noinspection OldTargetApi
         targetSdk = 36
         versionCode = 1
@@ -61,6 +61,7 @@ android {
         buildConfig = true
     }
     testOptions { unitTests { isIncludeAndroidResources = true } }
+    buildToolsVersion = "37.0.0"
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -98,7 +99,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.logging.interceptor)
-    implementation(libs.moshi.kotlin)
+    implementation(libs.moshi)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.litertlm)
@@ -120,6 +121,6 @@ dependencies {
     androidTestImplementation(libs.androidx.runner)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    "ksp"(libs.androidx.room.compiler)
-    "ksp"(libs.moshi.kotlin.codegen)
+    ksp(libs.androidx.room.compiler)
+    ksp(libs.moshi.kotlin.codegen)
 }

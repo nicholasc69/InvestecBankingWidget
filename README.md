@@ -61,7 +61,7 @@ The codebase is organized into key modules:
 
 ### 2. Set Up Local Gemma Model (LiteRT)
 The AI assistant runs a local language model. You must supply a compatible LiteRT model file:
-1. Obtain the `gemma-4-E2B-it.litertlm` model.
+1. Obtain the `gemma-4-E2B-it.litertlm` model. [Hugging Face](https://huggingface.co/google/gemma-4-E2B)
 2. Push the model to the target device's local tmp directory via ADB:
    ```bash
    adb push path/to/gemma-4-E2B-it.litertlm /data/local/tmp/
@@ -86,3 +86,11 @@ The project is fully integrated with:
   ```bash
   ./gradlew test
   ```
+---
+
+## Roadmap
+This is the planned roadmap for the Zebra Alex App
+
+1. Android App and Widget
+2. Android Watch Tile and LLM download option
+3. iOS App
