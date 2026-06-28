@@ -2,7 +2,7 @@
 
 An offline-first Android application and Home Screen Widget for Investec Private Banking. It integrates secure local database caching, biometric security, a Jetpack Glance home screen widget, and an on-device AI assistant ("Alex") powered by Google LiteRT (formerly TensorFlow Lite) using Gemma.
 
-![image1.jpg](images/image1.jpg)![image2.jpg](images/image2.jpg)![image3.jpg](images/image3.jpg)
+<img src="./images/image1.jpg" height="50%" width="50%">
 
 ---
 
