@@ -89,7 +89,6 @@ The project is fully integrated with:
 ---
 
 ## Roadmap
-This is the planned roadmap for the Zebra Alex App
 
 1. Android App and Widget
 2. Android Watch Tile and LLM download option
