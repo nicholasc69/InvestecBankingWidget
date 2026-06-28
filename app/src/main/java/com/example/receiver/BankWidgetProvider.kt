@@ -52,8 +52,24 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
         Log.d(TAG, "onReceive triggered action: ${intent.action}")
+        val isLockAction = intent.action == ACTION_LOCK_WIDGET
+        val isUserPresentAction = intent.action == Intent.ACTION_USER_PRESENT
+        
+        if (isLockAction || isUserPresentAction) {
+            val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
+            val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
+            val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
+            
+            if (isLockAction || !isRecent) {
+                prefs.edit(commit = true) {
+                    putBoolean("widget_unlocked", false)
+                    putLong("last_authenticated_time", 0L)
+                }
+            }
+        }
+
+        super.onReceive(context, intent)
         
         if (intent.action == ACTION_UNLOCK_WIDGET) {
             val pendingResult = goAsync()
@@ -70,17 +86,10 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
             return
         }
 
-        if (intent.action == ACTION_LOCK_WIDGET || intent.action == Intent.ACTION_USER_PRESENT) {
+        if (isLockAction || isUserPresentAction) {
             val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
-            val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
-            val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
-
-            if (intent.action == ACTION_LOCK_WIDGET || !isRecent) {
-                prefs.edit(commit = true) {
-                    putBoolean("widget_unlocked", false)
-                        .putLong("last_authenticated_time", 0L)
-                }
-
+            val isUnlocked = prefs.getBoolean("widget_unlocked", false)
+            if (!isUnlocked) {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
                     try {

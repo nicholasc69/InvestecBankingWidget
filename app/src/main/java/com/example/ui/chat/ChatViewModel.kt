@@ -29,36 +29,14 @@ class ChatViewModel @Inject constructor(
     private val engineManager: LiteRtEngineManager
 ) : AndroidViewModel(application) {
 
-    private val systemPrompt = """
-        ROLE AND PURPOSE:
-        You are Alex, a helpful financial assistant for Investec Private Banking.
-        You only have access to and must only return data for the currently selected profile. The tools you use automatically filter all bank accounts and transaction details to the selected profile.
-        You have access to tools that allow you to view account balances, recent transactions, all transactions, and synchronize data.
-
-        TOOL USE GUIDELINES:
-        1. When asked about accounts or balances, use 'getAllAccounts' to get the latest info.
-        2. To see recent transactions for a specific account, first get the account list to find the correct 'accountId', then use 'getRecentTransactions' with that accountId.
-        3. If the user asks for 'latest' or 'updated' info, use 'syncBankingData' first.
-        4. If you need an 'accountId' that you don't have, use 'getAllAccounts' to find it by name.
-        5. If the user asks to see recent transactions across all accounts, or does not specify which account to check, use 'getRecentTransactions' with accountId set to 'ALL'.
-        6. If the user asks to see all transactions (not just recent ones) for an account or across all accounts, use 'getAllTransactions' (passing the specific accountId, or 'ALL' if not specified / across all accounts).
-
-        FORMATTING RULES:
-        1. MARKDOWN SUPPORT: Use standard Markdown for formatting. Use double asterisks (**) to make headers, account names, and amounts bold. Use asterisks (*) or hyphens (-) for bulleted list items.
-        2. CLEAR PRESENTATION: Always present financial data clearly and conversationally. Avoid using markdown tables (such as |:---| structures) or database-style notation.
-
-        EXAMPLES OF CORRECT FORMATTING:
-        
-        Example 1 (Balances):
-        **BALANCE SUMMARY**
-        * Private Bank Account: **R 45,000.00**
-        * Savings Account: **R 120,500.00**
-        
-        Example 2 (Transactions):
-        **RECENT TRANSACTIONS**
-        1. 2026-06-18: Coffee Shop - **R 45.00**
-        2. 2026-06-17: Supermarket - **R 350.00**
-    """.trimIndent()
+    private val systemPrompt: String by lazy {
+        try {
+            getApplication<Application>().assets.open("system_prompt.txt").bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Error loading system_prompt.txt from assets", e)
+            ""
+        }
+    }
 
     val messages = mutableStateListOf<Message>()
     var inputText by mutableStateOf("")
@@ -93,7 +71,7 @@ class ChatViewModel @Inject constructor(
                     if (messages.isEmpty()) {
                         messages.add(
                             Message(
-                                text = "Hello! I'm Alex, your Investec Private Banking assistant. How can I help you manage your accounts, view transactions, or execute payments today?",
+                                text = "Hello! I'm Alex, your professional Investec Private Banking financial advisor. I can help you analyze your accounts, view recent transaction histories, synchronize your banking data, or plan your payments. How can I assist you with your financial goals today?",
                                 isUser = false
                             )
                         )

@@ -2,6 +2,8 @@
 
 An offline-first Android application and Home Screen Widget for Investec Private Banking. It integrates secure local database caching, biometric security, a Jetpack Glance home screen widget, and an on-device AI assistant ("Alex") powered by Google LiteRT (formerly TensorFlow Lite) using Gemma.
 
+![image1.jpg](assets/image1.jpg)![image2.jpg](assets/image2.jpg)![image3.jpg](assets/image3.jpg)
+
 ---
 
 ## 🚀 Key Features
@@ -26,20 +28,22 @@ An offline-first Android application and Home Screen Widget for Investec Private
 ## 🛠️ Project Structure
 
 The codebase is organized into key modules:
-- **`app/src/main/java/com/example/MainActivity.kt`**: [MainActivity.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/MainActivity.kt) - Entry Activity handling biometric authentication, state management, widget alarm scheduling, and app navigation.
+- **`app/src/main/java/com/example/MainActivity.kt`**: [MainActivity.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/MainActivity.kt) - Entry Activity handling biometric authentication, state management, widget alarm scheduling, and app navigation.
 - **`app/src/main/java/com/example/ui/dashboard/`**:
-  - [DashboardScreen.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/dashboard/DashboardScreen.kt) - Renders the main dashboard, including profile selections, account cards, transaction history lists, and secure settings management.
-  - [DashboardViewModel.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/dashboard/DashboardViewModel.kt) - Manages account states, sync events, and interacts with the repository.
+  - [DashboardScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/dashboard/DashboardScreen.kt) - Renders the main dashboard, including profile selections, account cards, transaction history lists, and secure settings management.
+  - [DashboardViewModel.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/dashboard/DashboardViewModel.kt) - Manages account states, sync events, and interacts with the repository.
 - **`app/src/main/java/com/example/ui/chat/`**:
-  - [ChatScreen.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatScreen.kt) - Natural chat UI representing conversation bubbles.
-  - [ChatViewModel.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatViewModel.kt) - Handles conversation context, LiteRT engine initialization, and streaming inferences.
+  - [ChatScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatScreen.kt) - Natural chat UI representing conversation bubbles.
+  - [ChatViewModel.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatViewModel.kt) - Handles conversation context, LiteRT engine initialization, and streaming inferences.
 - **`app/src/main/java/com/example/receiver/BankWidgetProvider.kt`**:
-  - [BankWidgetProvider.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/receiver/BankWidgetProvider.kt) - Logic for updating the Jetpack Glance Widget, evaluating biometric lock states, and checking session expiry.
+  - [BankWidgetProvider.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/receiver/BankWidgetProvider.kt) - Logic for updating the Jetpack Glance Widget, evaluating biometric lock states, and checking session expiry.
 - **`app/src/main/java/com/example/data/`**:
-  - `ai/`: Contains [LiteRtEngineManager.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/ai/LiteRtEngineManager.kt) (LM lifecycle) and [BankingToolSet.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/ai/BankingToolSet.kt) (agent function calling registry).
-  - `api/`: [InvestecApiService.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/api/InvestecApiService.kt) - Retrofit network client configuration and service definitions for the Investec OpenAPI.
+  - `ai/`: Contains [LiteRtEngineManager.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/ai/LiteRtEngineManager.kt) (LM lifecycle) and [BankingToolSet.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/ai/BankingToolSet.kt) (agent function calling registry).
+  - `api/`: [InvestecApiService.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/api/InvestecApiService.kt) - Retrofit network client configuration and service definitions for the Investec OpenAPI.
   - `local/`: Room Database configuration, Account and Transaction Entity DAOs.
-  - `repository/`: [BankRepository.kt](file:///home/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/repository/BankRepository.kt) - Managing data synchronization, credential accessors, database updates, and payments.
+  - `repository/`: [BankRepository.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/data/repository/BankRepository.kt) - Managing data synchronization, credential accessors, database updates, and payments.
+- **`app/src/main/assets/`**:
+  - [system_prompt.txt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/assets/system_prompt.txt) - The system instruction prompt defining rules, guidelines, and formatting styles for the AI assistant.
 
 ---
 

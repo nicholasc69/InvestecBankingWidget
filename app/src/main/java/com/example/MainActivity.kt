@@ -10,6 +10,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
@@ -59,6 +62,10 @@ import androidx.core.content.edit
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
+    companion object {
+        var isAppInForeground = false
+    }
+
     @Inject
     lateinit var engineManager: LiteRtEngineManager
 
@@ -68,6 +75,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Start the background security service to monitor task removal and screen off
+        startService(Intent(this, com.example.service.WidgetSecurityService::class.java))
         if (intent.getBooleanExtra("JUST_AUTHENTICATE", false)) {
             authTrigger.value += 1
         }
@@ -186,11 +195,13 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        isAppInForeground = true
         cancelWidgetLockAlarm()
     }
 
     override fun onStop() {
         super.onStop()
+        isAppInForeground = false
         isAppAuthenticated.value = false
         
         // Refresh the authentication timestamp upon leaving the app to give a full 5 seconds of visibility
@@ -198,6 +209,24 @@ class MainActivity : FragmentActivity() {
         if (prefs.getBoolean("widget_unlocked", false)) {
             prefs.edit(commit = true) {putLong("last_authenticated_time", System.currentTimeMillis())}
             scheduleWidgetLockAlarm()
+            
+            // Background Coroutine timer as a robust fallback for lock enforcement after 5 seconds
+            CoroutineScope(Dispatchers.Default).launch {
+                delay(5_000)
+                if (!isAppInForeground) {
+                    val currentPrefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
+                    currentPrefs.edit(commit = true) {
+                        putBoolean("widget_unlocked", false)
+                        putLong("last_authenticated_time", 0L)
+                    }
+                    try {
+                        com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
+                        Log.d("MainActivity", "Coroutine locked widget successfully after 5 seconds background delay")
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error updating Glance widget in background coroutine: ${e.message}", e)
+                    }
+                }
+            }
         }
     }
 
@@ -273,30 +302,22 @@ class MainActivity : FragmentActivity() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val triggerTime = System.currentTimeMillis() + 5_000 // 5 seconds
+            val triggerTime = android.os.SystemClock.elapsedRealtime() + 5_000 // 5 seconds
 
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    if (alarmManager.canScheduleExactAlarms()) {
-                        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-                        Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
-                    } else {
-                        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-                        Log.d("MainActivity", "Scheduled inexact allow-while-idle widget lock alarm for 5 seconds from now")
-                    }
-                } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
                     Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
                 } else {
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                    alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
                     Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
                 }
             } catch (e: SecurityException) {
                 Log.w("MainActivity", "SecurityException scheduling exact alarm, falling back", e)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
                 } else {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                    alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
                 }
             }
         }
