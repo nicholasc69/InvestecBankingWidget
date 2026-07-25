@@ -131,6 +131,7 @@ class MainActivity : FragmentActivity() {
                     )
 
                     NavigationSuiteScaffold(
+                        modifier = Modifier.fillMaxSize(),
                         navigationSuiteColors = androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults.colors(
                             navigationBarContainerColor = backgroundLight,
                             navigationBarContentColor = textPrimary,

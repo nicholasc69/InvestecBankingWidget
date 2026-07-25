@@ -379,52 +379,53 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top App Bar matching Android TopAppBar
-            HStack {
-                HStack(spacing: 10) {
-                    ZebraBadgeView(size: 26, iconSize: 18)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                // Top App Bar matching Android TopAppBar
+                HStack {
+                    HStack(spacing: 10) {
+                        ZebraBadgeView(size: 26, iconSize: 18)
 
-                    Text("Investec Private Banking")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(Color.textPrimary)
-                }
+                        Text("Investec Private Banking")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                // Refresh Button
-                Button(action: { syncData() }) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
+                    // Refresh Button
+                    Button(action: { syncData() }) {
+                        if isRefreshing {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.textSecondary)
+                        }
+                    }
+                    .disabled(isRefreshing)
+                    .padding(.trailing, 12)
+
+                    // Settings Button
+                    Button(action: {
+                        withAnimation(.spring()) {
+                            showSettings.toggle()
+                        }
+                    }) {
+                        Image(systemName: "gearshape.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(Color.textSecondary)
+                            .foregroundColor(showSettings ? Color.accentOnContainer : Color.textSecondary)
                     }
                 }
-                .disabled(isRefreshing)
-                .padding(.trailing, 12)
+                .padding(.horizontal, 16)
+                .padding(.top, max(geometry.safeAreaInsets.top, 20))
+                .padding(.bottom, 12)
+                .background(Color.bgLight)
 
-                // Settings Button
-                Button(action: {
-                    withAnimation(.spring()) {
-                        showSettings.toggle()
-                    }
-                }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(showSettings ? Color.accentOnContainer : Color.textSecondary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 44) // Account for status bar height
-            .padding(.bottom, 12)
-            .background(Color.bgLight)
-
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Credentials Settings Form matching Android CredentialsSettingsForm
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Credentials Settings Form matching Android CredentialsSettingsForm
                     if showSettings {
                         CredentialsSettingsFormView(
                             useSandbox: $useSandbox,
@@ -629,8 +630,10 @@ struct DashboardView: View {
                 }
                 .padding(16)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         .onAppear {
             setupRepository()
             loadCachedData()
@@ -1158,111 +1161,116 @@ struct ChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top App Bar matching Android TopAppBar in ChatScreen
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentContainer)
-                        .frame(width: 36, height: 36)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                // Top App Bar matching Android TopAppBar in ChatScreen
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentContainer)
+                            .frame(width: 36, height: 36)
 
-                    Text("A")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color.accentOnContainer)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Alex")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color.textPrimary)
-
-                    Text("AI Financial Assistant")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color.textMuted)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 44) // Account for status bar height in full screen mode
-            .padding(.bottom, 12)
-            .background(Color.bgLight)
-
-            // Message Thread
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(messages.filter { !$0.isSystem && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }) { msg in
-                            HStack {
-                                if msg.isUser { Spacer() }
-
-                                Text(msg.text)
-                                    .font(.system(size: 14))
-                                    .padding(12)
-                                    .foregroundColor(msg.isUser ? Color.accentOnContainer : Color.textPrimary)
-                                    .background(msg.isUser ? Color.accentContainer : Color.cardSurface)
-                                    .cornerRadius(16)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(msg.isUser ? Color.clear : Color.cardBorder, lineWidth: 1)
-                                    )
-
-                                if !msg.isUser { Spacer() }
-                            }
-                            .id(msg.id)
-                        }
+                        Text("A")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(Color.accentOnContainer)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Alex")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+
+                        Text("AI Financial Assistant")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color.textMuted)
+                    }
+
+                    Spacer()
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, max(geometry.safeAreaInsets.top, 20))
+                .padding(.bottom, 12)
                 .background(Color.bgLight)
-                .onChange(of: messages.count) { _ in
-                    if let lastId = messages.last?.id {
-                        withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
+
+                // Message Thread
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(messages.filter { !$0.isSystem && !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }) { msg in
+                                HStack {
+                                    if msg.isUser { Spacer() }
+
+                                    Text(msg.text)
+                                        .font(.system(size: 14))
+                                        .padding(12)
+                                        .foregroundColor(msg.isUser ? Color.accentOnContainer : Color.textPrimary)
+                                        .background(msg.isUser ? Color.accentContainer : Color.cardSurface)
+                                        .cornerRadius(16)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(msg.isUser ? Color.clear : Color.cardBorder, lineWidth: 1)
+                                        )
+
+                                    if !msg.isUser { Spacer() }
+                                }
+                                .id(msg.id)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.bgLight)
+                    .onChange(of: messages.count) { _ in
+                        if let lastId = messages.last?.id {
+                            withAnimation {
+                                proxy.scrollTo(lastId, anchor: .bottom)
+                            }
                         }
                     }
                 }
-            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Input Bar matching Android OutlinedTextField and Send Button
-            HStack(spacing: 8) {
-                TextField("Type a message...", text: $inputText)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.cardSurface)
-                    .cornerRadius(24)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(Color.cardBorder, lineWidth: 1)
-                    )
-
-                Button(action: {
-                    let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                    if !trimmed.isEmpty {
-                        let textToSend = trimmed
-                        inputText = ""
-                        sendMessage(textToSend)
-                    }
-                }) {
-                    Text("Send")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(Color.textPrimary)
+                // Input Bar matching Android OutlinedTextField and Send Button
+                HStack(spacing: 8) {
+                    TextField("Type a message...", text: $inputText)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color.accentContainer)
-                        .cornerRadius(20)
+                        .background(Color.cardSurface)
+                        .cornerRadius(24)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.accentOnContainer, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(Color.cardBorder, lineWidth: 1)
                         )
+
+                    Button(action: {
+                        let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                        if !trimmed.isEmpty {
+                            let textToSend = trimmed
+                            inputText = ""
+                            sendMessage(textToSend)
+                        }
+                    }) {
+                        Text("Send")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(Color.textPrimary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.accentContainer)
+                            .cornerRadius(24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(Color.accentOnContainer, lineWidth: 1)
+                            )
+                    }
+                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(Color.bgLight)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-            .background(Color.bgLight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

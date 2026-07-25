@@ -140,7 +140,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "if [ -f \"$HOME/.sdkman/bin/sdkman-init.sh\" ]; then\n    export SDKMAN_DIR=\"$HOME/.sdkman\"\n    source \"$HOME/.sdkman/bin/sdkman-init.sh\"\nfi\nif [ -z \"$JAVA_HOME\" ]; then\n    if [ -d \"$HOME/.sdkman/candidates/java/current\" ]; then\n        export JAVA_HOME=\"$HOME/.sdkman/candidates/java/current\"\n    elif [ -x \"/usr/libexec/java_home\" ]; then\n        export JAVA_HOME=\"$(/usr/libexec/java_home 2>/dev/null)\"\n    fi\nfi\nif [ -n \"$JAVA_HOME\" ]; then\n    export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
