@@ -89,7 +89,7 @@ class MainActivity : FragmentActivity() {
                         val prefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
                         val widgetUnlocked = prefs.getBoolean("widget_unlocked", false)
                         val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
-                        val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
+                        val isRecent = (System.currentTimeMillis() - lastAuthTime) < 300_000L
                         val forceAuth = intent.getBooleanExtra("JUST_AUTHENTICATE", false)
 
                         if (widgetUnlocked && isRecent && !forceAuth) {
@@ -210,9 +210,9 @@ class MainActivity : FragmentActivity() {
             prefs.edit(commit = true) {putLong("last_authenticated_time", System.currentTimeMillis())}
             scheduleWidgetLockAlarm()
             
-            // Background Coroutine timer as a robust fallback for lock enforcement after 5 seconds
+            // Background Coroutine timer as a robust fallback for lock enforcement after 5 minutes
             CoroutineScope(Dispatchers.Default).launch {
-                delay(5_000)
+                delay(300_000L)
                 if (!isAppInForeground) {
                     val currentPrefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
                     currentPrefs.edit(commit = true) {
@@ -221,7 +221,7 @@ class MainActivity : FragmentActivity() {
                     }
                     try {
                         com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
-                        Log.d("MainActivity", "Coroutine locked widget successfully after 5 seconds background delay")
+                        Log.d("MainActivity", "Coroutine locked widget successfully after 5 minutes background delay")
                     } catch (e: Exception) {
                         Log.e("MainActivity", "Error updating Glance widget in background coroutine: ${e.message}", e)
                     }
@@ -302,15 +302,15 @@ class MainActivity : FragmentActivity() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val triggerTime = android.os.SystemClock.elapsedRealtime() + 5_000 // 5 seconds
+            val triggerTime = android.os.SystemClock.elapsedRealtime() + 300_000L // 5 minutes
 
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
-                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
+                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 minutes from now")
                 } else {
                     alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerTime, pendingIntent)
-                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 seconds from now")
+                    Log.d("MainActivity", "Scheduled exact widget lock alarm for 5 minutes from now")
                 }
             } catch (e: SecurityException) {
                 Log.w("MainActivity", "SecurityException scheduling exact alarm, falling back", e)

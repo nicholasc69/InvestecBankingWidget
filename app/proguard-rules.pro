@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# AGP 9.x repackages classes into the unnamed package by default.
+# This can cause ClassNotFoundException for the Application class.
+-dontrepackage
+-keep class com.example.BankingApp { *; }

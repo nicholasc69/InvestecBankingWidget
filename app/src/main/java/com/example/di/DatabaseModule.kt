@@ -4,6 +4,8 @@ import android.content.Context
 import com.example.data.local.BankAccountDao
 import com.example.data.local.BankDatabase
 import com.example.data.local.TransactionDao
+import com.example.data.local.createDatabase
+import com.example.data.local.getDatabaseBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,7 +20,7 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): BankDatabase {
-        return BankDatabase.getDatabase(context)
+        return createDatabase(getDatabaseBuilder(context))
     }
 
     @Provides

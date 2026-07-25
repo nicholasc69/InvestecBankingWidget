@@ -31,6 +31,8 @@ import com.example.MainActivity
 import com.example.WidgetUnlockActivity
 import com.example.R
 import com.example.data.local.BankDatabase
+import com.example.data.local.createDatabase
+import com.example.data.local.getDatabaseBuilder
 import com.example.data.model.BankAccountEntity
 import com.example.data.model.TransactionEntity
 import kotlinx.coroutines.CoroutineScope
@@ -59,7 +61,7 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
         if (isLockAction || isUserPresentAction) {
             val prefs = context.getSharedPreferences("widget_security_prefs", Context.MODE_PRIVATE)
             val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
-            val isRecent = (System.currentTimeMillis() - lastAuthTime) < 5_000
+            val isRecent = (System.currentTimeMillis() - lastAuthTime) < 300_000L
             
             if (isLockAction || !isRecent) {
                 prefs.edit(commit = true) {
@@ -109,11 +111,30 @@ class BankWidgetProvider : GlanceAppWidgetReceiver() {
 class BankGlanceWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         Log.d("BankGlanceWidget", "provideGlance called")
-        val database = BankDatabase.getDatabase(context)
-        val accounts = database.bankAccountDao().getAccounts()
+        val database = createDatabase(getDatabaseBuilder(context))
+        var accounts = database.bankAccountDao().getAccounts()
+
+        if (accounts.isEmpty()) {
+            try {
+                val dataStoreFile = context.filesDir.resolve("datastore/settings.preferences_pb")
+                val dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create { dataStoreFile }
+                val encryptedPrefs = context.getSharedPreferences("encrypted_app_settings", Context.MODE_PRIVATE)
+                val settings = com.example.di.AndroidKeyValueSettings(dataStore, encryptedPrefs)
+                val repository = com.example.data.repository.BankRepository(
+                    accountDao = database.bankAccountDao(),
+                    transactionDao = database.transactionDao(),
+                    settings = settings
+                )
+                repository.syncData()
+                accounts = database.bankAccountDao().getAccounts()
+            } catch (e: Exception) {
+                Log.e("BankGlanceWidget", "Widget auto-sync failed: ${e.message}", e)
+            }
+        }
+
         val activeAccount = accounts.firstOrNull()
         val transactions = activeAccount?.let {
-            database.transactionDao().getAllTransactions(it.accountId)
+            database.transactionDao().getLastFiveTransactions(it.accountId)
         } ?: emptyList()
 
         provideContent {
@@ -121,7 +142,7 @@ class BankGlanceWidget : GlanceAppWidget() {
             val isUnlocked = prefs.getBoolean("widget_unlocked", false)
             val lastAuthTime = prefs.getLong("last_authenticated_time", 0)
             val currentTime = System.currentTimeMillis()
-            val isExpired = (currentTime - lastAuthTime) > 5_000
+            val isExpired = (currentTime - lastAuthTime) > 300_000L // 5 minutes unlock session
 
             val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
             val isKeyguardLocked = keyguardManager.isKeyguardLocked

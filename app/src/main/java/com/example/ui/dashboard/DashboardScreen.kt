@@ -518,10 +518,10 @@ fun CredentialsSettingsForm(
     onSave: (useSandbox: Boolean, clientId: String, clientSecret: String, apiKey: String) -> Unit,
     onCancel: () -> Unit
 ) {
-    var sbState by remember { mutableStateOf(useSandbox) }
-    var cidState by remember { mutableStateOf(clientId) }
-    var secretState by remember { mutableStateOf(clientSecret) }
-    var apiKeyState by remember { mutableStateOf(apiKey) }
+    var sbState by remember(useSandbox) { mutableStateOf(useSandbox) }
+    var cidState by remember(clientId) { mutableStateOf(clientId) }
+    var secretState by remember(clientSecret) { mutableStateOf(clientSecret) }
+    var apiKeyState by remember(apiKey) { mutableStateOf(apiKey) }
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
