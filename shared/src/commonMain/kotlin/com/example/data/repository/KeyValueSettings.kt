@@ -8,4 +8,5 @@ interface KeyValueSettings {
     fun getBoolean(key: String, defaultValue: Boolean): Boolean
     fun setBoolean(key: String, value: Boolean)
     fun getBooleanFlow(key: String, defaultValue: Boolean): Flow<Boolean>
+    fun getStringFlow(key: String, defaultValue: String): Flow<String>
 }

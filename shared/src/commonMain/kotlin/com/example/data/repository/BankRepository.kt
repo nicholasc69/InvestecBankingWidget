@@ -50,17 +50,23 @@ class BankRepository(
 
     fun getClientId(): String = settings.getString("client_id", "")
 
+    fun clientIdFlow(): Flow<String> = settings.getStringFlow("client_id", "")
+
     fun setClientId(clientId: String) {
         settings.setString("client_id", clientId)
     }
 
     fun getClientSecret(): String = settings.getString("client_secret", "")
 
+    fun clientSecretFlow(): Flow<String> = settings.getStringFlow("client_secret", "")
+
     fun setClientSecret(secret: String) {
         settings.setString("client_secret", secret)
     }
 
     fun getApiKey(): String = settings.getString("api_key", "")
+
+    fun apiKeyFlow(): Flow<String> = settings.getStringFlow("api_key", "")
 
     fun setApiKey(apiKey: String) {
         settings.setString("api_key", apiKey)
@@ -220,6 +226,8 @@ class BankRepository(
 
             if (cachedAccounts.isNotEmpty()) {
                 accountDao.replaceAccounts(cachedAccounts)
+            } else {
+                accountDao.clearAccounts()
             }
 
             // Trigger widget update callback

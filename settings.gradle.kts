@@ -26,3 +26,5 @@ rootProject.name = "My Application"
 
 include(":app")
 include(":shared")
+include(":wear")
+

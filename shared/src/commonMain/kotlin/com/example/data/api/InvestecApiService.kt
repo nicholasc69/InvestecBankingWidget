@@ -124,6 +124,11 @@ object InvestecApiClient {
                     prettyPrint = true
                 })
             }
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 3000
+                connectTimeoutMillis = 3000
+                socketTimeoutMillis = 3000
+            }
             defaultRequest {
                 url(sanitizedBaseUrl)
             }

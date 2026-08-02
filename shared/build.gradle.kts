@@ -40,6 +40,7 @@ kotlin {
         
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.play.services.wearable)
         }
         
         iosMain.dependencies {
