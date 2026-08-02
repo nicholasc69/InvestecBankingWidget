@@ -55,6 +55,12 @@ class FakeKeyValueSettings : KeyValueSettings {
         if (key == "use_sandbox") sandboxFlow.value = value
     }
     override fun getBooleanFlow(key: String, defaultValue: Boolean): Flow<Boolean> = if (key == "use_sandbox") sandboxFlow else flowOf(getBoolean(key, defaultValue))
+    override fun getStringFlow(
+        key: String,
+        defaultValue: String
+    ): Flow<String> {
+        TODO("Not yet implemented")
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
