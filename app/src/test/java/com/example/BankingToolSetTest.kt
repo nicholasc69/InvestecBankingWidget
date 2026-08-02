@@ -42,12 +42,11 @@ class BankingToolSetTest {
         }
         val encryptedPrefs = context.getSharedPreferences("test_encrypted_prefs", Context.MODE_PRIVATE)
 
+        val settings = com.example.di.AndroidKeyValueSettings(dataStore, encryptedPrefs)
         repository = BankRepository(
-            context = context,
             accountDao = db.bankAccountDao(),
             transactionDao = db.transactionDao(),
-            dataStore = dataStore,
-            encryptedPrefs = encryptedPrefs
+            settings = settings
         )
 
         toolSet = BankingToolSet(repository)
@@ -240,5 +239,34 @@ class BankingToolSetTest {
         val syncBankingDataMethod = methods.firstOrNull { it.name == "syncBankingData" }
         assertNotNull(syncBankingDataMethod)
         assertEquals(0, syncBankingDataMethod!!.parameterCount)
+    }
+
+    @Test
+    fun testSandboxPersistenceAndCredentials() = runTest {
+        assertTrue(repository.useSandbox())
+
+        val (cid, sec, key) = repository.getActiveCredentials()
+        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_ID, cid)
+        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET, sec)
+        assertEquals(BankRepository.DEFAULT_SANDBOX_API_KEY, key)
+
+        repository.setUseSandbox(false)
+        repository.setClientId("prod_cid")
+        repository.setClientSecret("prod_sec")
+        repository.setApiKey("prod_key")
+
+        assertTrue(!repository.useSandbox())
+        val (pCid, pSec, pKey) = repository.getActiveCredentials()
+        assertEquals("prod_cid", pCid)
+        assertEquals("prod_sec", pSec)
+        assertEquals("prod_key", pKey)
+
+        repository.setUseSandbox(true)
+        assertTrue(repository.useSandbox())
+
+        val (sCid, sSec, sKey) = repository.getActiveCredentials()
+        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_ID, sCid)
+        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET, sSec)
+        assertEquals(BankRepository.DEFAULT_SANDBOX_API_KEY, sKey)
     }
 }

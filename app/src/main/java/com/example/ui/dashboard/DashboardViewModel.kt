@@ -18,6 +18,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import android.content.Context
+import com.example.data.repository.KeyValueSettings
+import com.example.data.sync.WearSettingsSyncHelper
+import dagger.hilt.android.qualifiers.ApplicationContext
+
 sealed interface DashboardUiState {
     object Loading : DashboardUiState
     data class Success(
@@ -33,7 +38,9 @@ sealed interface DashboardUiState {
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val repository: BankRepository
+    private val repository: BankRepository,
+    private val settings: KeyValueSettings,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     // State properties for configuration settings
@@ -66,10 +73,11 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = combine(
         repository.getAccountsFlow(),
         _selectedProfileId,
-        _selectedAccountId
-    ) { accounts, selectProfileId, selectAccountId ->
+        _selectedAccountId,
+        _isRefreshing
+    ) { accounts, selectProfileId, selectAccountId, refreshing ->
         if (accounts.isEmpty()) {
-            if (_isRefreshing.value) DashboardUiState.Loading else DashboardUiState.Success(
+            if (refreshing) DashboardUiState.Loading else DashboardUiState.Success(
                 emptyList(),
                 null,
                 emptyList(),
@@ -79,8 +87,13 @@ class DashboardViewModel @Inject constructor(
             // Extract distinct profiles from all synced accounts
             val profilesList = accounts.map { it.profileId to it.profileName }.distinct()
 
-            // Resolve the active profile ID (default to first profile in the list)
-            val activeProfileId = selectProfileId ?: repository.getSelectedProfileId() ?: profilesList.firstOrNull()?.first
+            // Resolve the active profile ID (validating against available profiles in synced data)
+            val storedProfileId = selectProfileId ?: repository.getSelectedProfileId()
+            val activeProfileId = if (storedProfileId != null && profilesList.any { it.first == storedProfileId }) {
+                storedProfileId
+            } else {
+                profilesList.firstOrNull()?.first
+            }
 
             // Filter accounts belonging only to the active profile
             val filteredAccounts = if (activeProfileId != null) {
@@ -149,6 +162,7 @@ class DashboardViewModel @Inject constructor(
             _selectedProfileId.value = profileId
             _selectedAccountId.value = null
             repository.setSelectedProfileId(profileId)
+            WearSettingsSyncHelper.pushSettingsToWear(context, settings)
             refreshData()
         }
     }
@@ -164,9 +178,17 @@ class DashboardViewModel @Inject constructor(
             repository.setClientSecret(secret)
             repository.setApiKey(apiKey)
 
+            // Reset selected profile & account to ensure clean profile resolution with new credentials
+            repository.setSelectedProfileId(null)
+            _selectedProfileId.value = null
+            _selectedAccountId.value = null
+
             _clientId.value = clientId
             _clientSecret.value = secret
             _apiKey.value = apiKey
+
+            // Sync settings to Wear OS DataLayer
+            WearSettingsSyncHelper.pushSettingsToWear(context, settings)
 
             // Retrigger sync
             refreshData()

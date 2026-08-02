@@ -1,18 +1,71 @@
-*.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ==========================================
+# Android & Gradle Ignores
+# ==========================================
+.gradle/
+.kotlin/
+build/
+**/build/
+.build-outputs/
 local.properties
-.env
 debug.keystore
+debug.keystore.base64
+*.apk
+*.aab
+*.dex
+*.class
+
+# Native C/C++ builds
+.externalNativeBuild/
+.cxx/
+captures/
+
+# ==========================================
+# iOS & Xcode Ignores
+# ==========================================
+iosApp/build/
+**/DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+**/xcuserdata/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager & CocoaPods
+.build/
+Pods/
+
+# ==========================================
+# IDEs, Tools & System Ignores
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+!.idea/copyright/
+!.idea/vcs.xml
+
+# Internal agent & tool artifacts
+.artifacts/
+
+# Environment & Credentials
+.env
+*.env

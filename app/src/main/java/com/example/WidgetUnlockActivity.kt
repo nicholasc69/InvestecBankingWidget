@@ -80,9 +80,9 @@ class WidgetUnlockActivity : FragmentActivity() {
         }
         scheduleWidgetLockAlarm()
 
-        // Background Coroutine timer as a robust fallback for lock enforcement after 5 seconds
+        // Background Coroutine timer as a robust fallback for lock enforcement after 5 minutes
         CoroutineScope(Dispatchers.Default).launch {
-            delay(5_000)
+            delay(300_000L)
             if (!MainActivity.isAppInForeground) {
                 val currentPrefs = getSharedPreferences("widget_security_prefs", MODE_PRIVATE)
                 currentPrefs.edit(commit = true) {
@@ -91,7 +91,7 @@ class WidgetUnlockActivity : FragmentActivity() {
                 }
                 try {
                     com.example.receiver.BankGlanceWidget().updateAll(applicationContext)
-                    Log.d(TAG, "Coroutine locked widget successfully after 5 seconds widget-unlock delay")
+                    Log.d(TAG, "Coroutine locked widget successfully after 5 minutes widget-unlock delay")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error updating Glance widget in widget-unlock coroutine: ${e.message}", e)
                 }
@@ -102,7 +102,7 @@ class WidgetUnlockActivity : FragmentActivity() {
             try {
                 com.example.receiver.BankGlanceWidget().updateAll(this@WidgetUnlockActivity)
                 Log.d(TAG, "Glance widget updated on unlock successfully")
-                delay(1500)
+                delay(300)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating Glance widget: ${e.message}", e)
             } finally {
@@ -123,7 +123,7 @@ class WidgetUnlockActivity : FragmentActivity() {
             try {
                 com.example.receiver.BankGlanceWidget().updateAll(this@WidgetUnlockActivity)
                 Log.d(TAG, "Glance widget updated on lock successfully")
-                delay(1500)
+                delay(300)
             } catch (e: Exception) {
                 Log.e(TAG, "Error locking Glance widget: ${e.message}", e)
             } finally {
@@ -143,7 +143,7 @@ class WidgetUnlockActivity : FragmentActivity() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val triggerTime = android.os.SystemClock.elapsedRealtime() + 5_000 // 5 seconds
+        val triggerTime = android.os.SystemClock.elapsedRealtime() + 300_000L // 5 minutes
 
         try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {

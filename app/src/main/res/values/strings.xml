@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Zebra Alex</string>
+    <string name="tile_name">Investec Bank</string>
+    <string name="tile_description">Quick view of your Investec balances and latest transaction</string>
 </resources>
