@@ -58,9 +58,7 @@ class FakeKeyValueSettings : KeyValueSettings {
     override fun getStringFlow(
         key: String,
         defaultValue: String
-    ): Flow<String> {
-        TODO("Not yet implemented")
-    }
+    ): Flow<String> = flowOf(getString(key, defaultValue))
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

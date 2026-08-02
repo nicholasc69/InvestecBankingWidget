@@ -1,7 +1,7 @@
 package com.example.wear.presentation
 
 import androidx.compose.runtime.*
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
@@ -46,9 +46,6 @@ fun WearBankingAppUi(
                     },
                     onClearError = {
                         viewModel.clearError()
-                    },
-                    onConnectionSettingsRequested = {
-                        navController.navigate("connection_settings")
                     }
                 )
             }
@@ -76,9 +73,13 @@ fun WearBankingAppUi(
                 AccountPickerScreen(
                     accounts = uiState.accounts,
                     selectedAccountId = uiState.selectedAccountId,
+                    useSandbox = uiState.useSandbox,
                     onAccountSelected = { accountId ->
                         viewModel.selectAccount(accountId)
                         navController.popBackStack()
+                    },
+                    onConnectionSettingsRequested = {
+                        navController.navigate("connection_settings")
                     },
                     onBackClicked = {
                         navController.popBackStack()

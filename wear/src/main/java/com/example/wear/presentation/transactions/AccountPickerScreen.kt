@@ -15,6 +15,7 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.*
 import com.example.data.model.BankAccountEntity
+import com.example.wear.presentation.theme.CreditGreen
 import com.example.wear.presentation.theme.InvestecBlueAccent
 import com.example.wear.presentation.theme.InvestecGold
 import com.example.wear.presentation.theme.TextSecondary
@@ -24,7 +25,9 @@ import java.text.DecimalFormat
 fun AccountPickerScreen(
     accounts: List<BankAccountEntity>,
     selectedAccountId: String,
+    useSandbox: Boolean = false,
     onAccountSelected: (String) -> Unit,
+    onConnectionSettingsRequested: () -> Unit,
     onBackClicked: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
@@ -117,8 +120,36 @@ fun AccountPickerScreen(
                 )
             }
 
+            // Connection Settings Button
             item {
                 Spacer(modifier = Modifier.height(12.dp))
+                Chip(
+                    onClick = onConnectionSettingsRequested,
+                    label = {
+                        Text(
+                            text = "Connection Settings",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    secondaryLabel = {
+                        Text(
+                            text = if (useSandbox) "Sandbox Mode" else "Secure API Mode",
+                            fontSize = 9.sp,
+                            color = if (useSandbox) InvestecGold else CreditGreen,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
                 CompactChip(
                     onClick = onBackClicked,
                     label = {

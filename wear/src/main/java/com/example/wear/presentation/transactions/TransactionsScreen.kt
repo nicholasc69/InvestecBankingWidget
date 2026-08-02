@@ -27,8 +27,7 @@ fun TransactionsScreen(
     onAccountPickerRequested: () -> Unit,
     onFilterSelected: (TransactionFilter) -> Unit,
     onRefreshClicked: () -> Unit,
-    onClearError: () -> Unit,
-    onConnectionSettingsRequested: () -> Unit
+    onClearError: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
     val df = DecimalFormat("#,##0.00")
@@ -199,32 +198,6 @@ fun TransactionsScreen(
                             )
                         },
                         colors = ChipDefaults.secondaryChipColors()
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Chip(
-                        onClick = onConnectionSettingsRequested,
-                        label = {
-                            Text(
-                                text = "Connection Settings",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        secondaryLabel = {
-                            Text(
-                                text = if (uiState.useSandbox) "Sandbox Mode" else "Secure API Mode",
-                                fontSize = 9.sp,
-                                color = if (uiState.useSandbox) InvestecGold else CreditGreen,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        colors = ChipDefaults.secondaryChipColors(),
-                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
