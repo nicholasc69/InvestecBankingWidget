@@ -2,12 +2,14 @@ package com.example.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.NSUserDefaults
 
 class IOSKeyValueSettings : KeyValueSettings {
     private val defaults = NSUserDefaults.standardUserDefaults
     private val initialSandbox = if (defaults.objectForKey("use_sandbox") == null) true else defaults.boolForKey("use_sandbox")
     private val sandboxFlow = MutableStateFlow(initialSandbox)
+    private val stringFlows = mutableMapOf<String, MutableStateFlow<String>>()
 
     override fun getString(key: String, defaultValue: String): String {
         // Return default sandbox credentials if not set
@@ -21,6 +23,7 @@ class IOSKeyValueSettings : KeyValueSettings {
     override fun setString(key: String, value: String) {
         defaults.setObject(value, key)
         defaults.synchronize()
+        stringFlows[key]?.value = value
     }
 
     override fun getBoolean(key: String, defaultValue: Boolean): Boolean {
@@ -41,5 +44,11 @@ class IOSKeyValueSettings : KeyValueSettings {
             return sandboxFlow
         }
         return kotlinx.coroutines.flow.flowOf(getBoolean(key, defaultValue))
+    }
+
+    override fun getStringFlow(key: String, defaultValue: String): Flow<String> {
+        return stringFlows.getOrPut(key) {
+            MutableStateFlow(getString(key, defaultValue))
+        }.asStateFlow()
     }
 }
