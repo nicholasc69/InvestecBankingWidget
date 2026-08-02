@@ -109,6 +109,7 @@ The project is integrated with:
 - [x] **Kotlin Multiplatform (KMP) Shared Data Core**
 - [x] **Wear OS Smartwatch App & Watch Tile**
 - [x] **iOS Native SwiftUI Application**
+- [] ** iOS Chat Implemetation
 
 ## PS
 
