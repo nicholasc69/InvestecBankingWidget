@@ -12,18 +12,20 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import java.io.FileNotFoundException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class LiteRtEngineManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    val modelDownloadManager: ModelDownloadManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var engineDeferred: Deferred<Engine>? = null
+    private var currentEngine: Engine? = null
 
     init {
-        // Eagerly start initialization when the app starts
         startInitialization()
     }
 
@@ -34,19 +36,29 @@ class LiteRtEngineManager @Inject constructor(
 
         val deferred = scope.async {
             Engine.setNativeMinLogSeverity(LogSeverity.VERBOSE)
-            Log.d("LiteRtEngineManager", "Eagerly initializing LiteRT-LM Engine...")
             
-            // Optimize CPU backend by setting the thread count.
-            // Let's use 4 threads as a balanced default for mobile CPUs.
+            val modelFile = modelDownloadManager.getSelectedModelFile()
+            val selectedModel = modelDownloadManager.getSelectedModel()
+            
+            if (modelFile == null || !modelFile.exists()) {
+                val errorMsg = "No model file found for '${selectedModel.name}'. Please download the model using the Model Manager."
+                Log.e("LiteRtEngineManager", errorMsg)
+                throw FileNotFoundException(errorMsg)
+            }
+
+            val availableCores = Runtime.getRuntime().availableProcessors()
+            val optimalThreads = (availableCores - 2).coerceIn(4, 8)
+            Log.d("LiteRtEngineManager", "Initializing LiteRT-LM Engine with model: ${modelFile.absolutePath} using $optimalThreads CPU threads (Detected $availableCores cores)")
+            
             val config = EngineConfig(
-                modelPath = "/data/local/tmp/gemma-4-E2B-it.litertlm",
-                backend = Backend.CPU(numOfThreads = 4),
-//                backend = Backend.GPU(),
+                modelPath = modelFile.absolutePath,
+                backend = Backend.CPU(numOfThreads = optimalThreads),
                 cacheDir = context.cacheDir.absolutePath
             )
             val newEngine = Engine(config)
             newEngine.initialize()
-            Log.d("LiteRtEngineManager", "LiteRT-LM Engine initialized successfully!")
+            currentEngine = newEngine
+            Log.d("LiteRtEngineManager", "LiteRT-LM Engine initialized successfully with ${selectedModel.name}!")
             newEngine
         }
         engineDeferred = deferred
@@ -55,5 +67,19 @@ class LiteRtEngineManager @Inject constructor(
 
     suspend fun getEngine(): Engine {
         return startInitialization().await()
+    }
+
+    suspend fun reloadEngine(): Engine {
+        Log.d("LiteRtEngineManager", "Reloading engine with updated model selection...")
+        synchronized(this) {
+            try {
+                currentEngine?.close()
+            } catch (e: Exception) {
+                Log.w("LiteRtEngineManager", "Error closing old engine: ${e.message}")
+            }
+            currentEngine = null
+            engineDeferred = null
+        }
+        return getEngine()
     }
 }

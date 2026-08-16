@@ -2,6 +2,7 @@ package com.example.ui.chat
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,14 +13,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,10 +35,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -40,14 +53,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.ai.ModelCatalog
 
 data class Message(val text: String, val isUser: Boolean, val isSystem: Boolean = false)
 
@@ -63,6 +73,10 @@ fun ChatScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
+    val selectedModelId by viewModel.selectedModelId.collectAsStateWithLifecycle()
+    val downloadStates by viewModel.downloadStates.collectAsStateWithLifecycle()
+    val activeModel = remember(selectedModelId) { ModelCatalog.getById(selectedModelId) }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -73,6 +87,18 @@ fun ChatScreen(
     val textPrimary = remember { Color(0xFF1A1C1E) }
     val accentContainer = remember { Color(0xFFD6E3FF) }
     val accentOnContainer = remember { Color(0xFF001B3E) }
+
+    if (viewModel.showModelManager) {
+        ModelManagerDialog(
+            downloadStates = downloadStates,
+            selectedModelId = selectedModelId,
+            onDismiss = { viewModel.closeModelManager() },
+            onDownloadModel = { model, customUrl -> viewModel.downloadModel(model, customUrl) },
+            onCancelDownload = { modelId -> viewModel.cancelDownload(modelId) },
+            onDeleteModel = { modelId -> viewModel.deleteModel(modelId) },
+            onSelectModel = { modelId -> viewModel.selectAndSwitchModel(modelId) }
+        )
+    }
 
     Scaffold(
         modifier = modifier.background(backgroundLight),
@@ -110,6 +136,34 @@ fun ChatScreen(
                         }
                     }
                 },
+                actions = {
+                    Surface(
+                        onClick = { viewModel.openModelManager() },
+                        modifier = Modifier.padding(end = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = accentContainer,
+                        border = BorderStroke(1.dp, accentOnContainer)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "Model Downloader",
+                                tint = accentOnContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = activeModel.parameterCount,
+                                fontWeight = FontWeight.Bold,
+                                color = accentOnContainer,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backgroundLight,
                     titleContentColor = textPrimary
@@ -130,7 +184,7 @@ fun ChatScreen(
                     .verticalScrollbar(listState),
                 state = listState
             ) {
-                items(messages.filter { !it.isSystem && it.text.isNotBlank() }) { message ->
+                items(messages.filter { it.text.isNotBlank() }) { message ->
                     ChatBubble(message)
                 }
             }
@@ -140,7 +194,7 @@ fun ChatScreen(
                     .padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                androidx.compose.material3.OutlinedTextField(
+                OutlinedTextField(
                     value = inputText,
                     onValueChange = { viewModel.onInputTextChanged(it) },
                     modifier = Modifier.weight(1f),
@@ -155,7 +209,7 @@ fun ChatScreen(
                             focusManager.clearFocus()
                         }
                     ),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentOnContainer,
                         unfocusedBorderColor = Color(0xFFC4C6D0),
                         focusedContainerColor = Color(0xFFFDFBFF),

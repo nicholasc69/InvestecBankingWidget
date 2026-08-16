@@ -10,6 +10,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ai.BankingToolSet
 import com.example.data.ai.LiteRtEngineManager
+import com.example.data.ai.ModelDownloadManager
+import com.example.data.ai.ModelInfo
 import com.example.data.repository.BankRepository
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
@@ -18,6 +20,7 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.tool
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -26,7 +29,8 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     application: Application,
     private val repository: BankRepository,
-    private val engineManager: LiteRtEngineManager
+    private val engineManager: LiteRtEngineManager,
+    val downloadManager: ModelDownloadManager
 ) : AndroidViewModel(application) {
 
     private val systemPrompt: String by lazy {
@@ -42,6 +46,10 @@ class ChatViewModel @Inject constructor(
     var inputText by mutableStateOf("")
     var isInitializing by mutableStateOf(true)
     var initializationError by mutableStateOf<String?>(null)
+    var showModelManager by mutableStateOf(false)
+
+    val selectedModelId: StateFlow<String> = downloadManager.selectedModelId
+    val downloadStates = downloadManager.downloadStates
 
     private var engine: Engine? = null
     private var conversation: Conversation? = null
@@ -50,11 +58,88 @@ class ChatViewModel @Inject constructor(
         initializeEngine()
     }
 
+    fun openModelManager() {
+        downloadManager.refreshAllModelStates()
+        showModelManager = true
+    }
+
+    fun closeModelManager() {
+        showModelManager = false
+    }
+
+    fun downloadModel(model: ModelInfo, customUrl: String? = null) {
+        downloadManager.downloadModel(model, customUrl)
+    }
+
+    fun cancelDownload(modelId: String) {
+        downloadManager.cancelDownload(modelId)
+    }
+
+    fun deleteModel(modelId: String) {
+        downloadManager.deleteModel(modelId)
+    }
+
+    fun selectAndSwitchModel(modelId: String) {
+        downloadManager.setSelectedModel(modelId)
+        reinitializeEngine()
+    }
+
+    fun reinitializeEngine() {
+        isInitializing = true
+        initializationError = null
+        try {
+            conversation?.close()
+        } catch (e: Exception) {
+            Log.w("ChatViewModel", "Error closing old conversation: ${e.message}")
+        }
+        conversation = null
+        engine = null
+
+        viewModelScope.launch {
+            try {
+                val newEngine = engineManager.reloadEngine()
+                engine = newEngine
+
+                withContext(Dispatchers.IO) {
+                    val convConfig = ConversationConfig(
+                        systemInstruction = Contents.of(systemPrompt),
+                        tools = listOf(tool(BankingToolSet(repository))),
+                        automaticToolCalling = true
+                    )
+                    conversation = newEngine.createConversation(convConfig)
+                }
+                isInitializing = false
+                withContext(Dispatchers.Main) {
+                    val currentModelName = downloadManager.getSelectedModel().name
+                    messages.add(
+                        Message(
+                            text = "Model changed to **$currentModelName**. AI Engine successfully initialized and ready to assist!",
+                            isUser = false,
+                            isSystem = true
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Failed to re-initialize engine", e)
+                isInitializing = false
+                initializationError = e.message
+                withContext(Dispatchers.Main) {
+                    messages.add(
+                        Message(
+                            text = "Failed to load model: ${e.localizedMessage ?: e.message}. Click model icon to download model.",
+                            isUser = false,
+                            isSystem = true
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     private fun initializeEngine() {
         Log.d("ChatViewModel", "Requesting LiteRT-LM Engine from LiteRtEngineManager")
         viewModelScope.launch {
             try {
-                // Retrieve the pre-initialized or currently initializing engine
                 val newEngine = engineManager.getEngine()
                 engine = newEngine
 
@@ -84,8 +169,9 @@ class ChatViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     messages.add(
                         Message(
-                            text = "Failed to initialize AI: ${e.message}",
-                            isUser = false
+                            text = "Model initialisation warning: ${e.localizedMessage ?: e.message}\nTap the Model button at the top to download gemma-4-e2b-it or gemma-4-e4b-it.",
+                            isUser = false,
+                            isSystem = true
                         )
                     )
                 }
@@ -112,17 +198,26 @@ class ChatViewModel @Inject constructor(
 
             try {
                 var fullResponse = ""
+                var lastUiUpdateTime = 0L
                 withContext(Dispatchers.IO) {
                     currentConversation.sendMessageAsync(query).collect { token ->
                         val cleanToken = token.toString()
                         fullResponse += cleanToken
-                        Log.d("ChatViewModel", "Token: '$cleanToken'")
-                        withContext(Dispatchers.Main) {
-                            if (botMessageIndex < messages.size) {
-                                messages[botMessageIndex] =
-                                    Message(text = fullResponse, isUser = false)
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastUiUpdateTime >= 45L) {
+                            lastUiUpdateTime = currentTime
+                            val snapshot = fullResponse
+                            withContext(Dispatchers.Main) {
+                                if (botMessageIndex < messages.size) {
+                                    messages[botMessageIndex] = Message(text = snapshot, isUser = false)
+                                }
                             }
                         }
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    if (botMessageIndex < messages.size) {
+                        messages[botMessageIndex] = Message(text = fullResponse, isUser = false)
                     }
                 }
                 Log.d("ChatViewModel", "Full response: '$fullResponse'")
@@ -144,7 +239,6 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
         try {
             conversation?.close()
-            // Do NOT close engine as its lifecycle is managed by LiteRtEngineManager singleton
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Error closing resources", e)
         }

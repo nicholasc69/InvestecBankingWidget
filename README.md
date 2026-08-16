@@ -69,11 +69,13 @@ The codebase is organized into key modules:
 - An emulator or physical device supporting **Biometric Authentication**.
 
 ### 2. Set Up Local Gemma Model (LiteRT)
-The AI assistant runs a local language model. You must supply a compatible LiteRT model file:
-1. Obtain the `gemma-4-E2B-it.litertlm` model from [Hugging Face](https://huggingface.co/google/gemma-4-E2B).
-2. Push the model to the target device's local tmp directory via ADB:
+The AI assistant runs on-device Google LiteRT models. You can select and download models directly in the app or push them manually:
+1. **In-App Model Manager (Recommended)**: Open the **Chat** tab and tap the **Model Downloader** icon in the top app bar to download either **gemma-4-e2b-it** (~1.5 GB) or **gemma-4-e4b-it** (~3.2 GB) directly to your device.
+2. **Manual ADB Option**: You can also push a model file directly to the device local tmp directory:
    ```bash
-   adb push path/to/gemma-4-E2B-it.litertlm /data/local/tmp/
+   adb push gemma-4-E2B-it.litertlm /data/local/tmp/
+   # or
+   adb push gemma-4-E4B-it.litertlm /data/local/tmp/
    ```
 
 ### 3. Open API Credentials Setup
