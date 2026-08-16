@@ -7,6 +7,9 @@ An offline-first Kotlin Multiplatform (KMP) application suite for Investec Priva
   <img src="./images/image2.jpg" width="32%">
   <img src="./images/image3.jpg" width="32%">
 </p>
+<p>
+<img src="./images/image4.jpg" width="32%">
+</p>
 
 ---
 
