@@ -24,7 +24,7 @@ import com.example.data.sync.WearSettingsSyncHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 sealed interface DashboardUiState {
-    object Loading : DashboardUiState
+    data object Loading : DashboardUiState
     data class Success(
         val accounts: List<BankAccountEntity>,
         val selectedAccount: BankAccountEntity?,

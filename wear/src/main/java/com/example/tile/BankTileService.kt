@@ -66,6 +66,8 @@ class BankTileService : TileService() {
         }
     }
 
+    @Deprecated("Deprecated in TileService")
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> {
         return CallbackToFutureAdapter.getFuture { completer ->
             val resources = ResourceBuilders.Resources.Builder()
