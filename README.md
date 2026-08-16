@@ -1,6 +1,6 @@
 # Zebra Alex - Investec Private Banking AI Assistant & Multiplatform Suite
 
-An offline-first Kotlin Multiplatform (KMP) application suite for Investec Private Banking, supporting **Android**, **Wear OS (App & Watch Tile)**, and **iOS (SwiftUI)**. It integrates secure local database caching, biometric security, a Jetpack Glance home screen widget, Wear OS smartwatch tiles, and an on-device AI assistant ("Alex") powered by Google LiteRT (formerly TensorFlow Lite) using Gemma.
+An offline-first Kotlin Multiplatform (KMP) application suite for Investec Private Banking, supporting **Android**, **Wear OS (App & Watch Tile)**, and **iOS (SwiftUI)**. It integrates secure local database caching, biometric security, interactive financial analytics, a Jetpack Glance home screen widget, Wear OS smartwatch tiles, and an on-device AI assistant ("Alex") powered by Google LiteRT (formerly TensorFlow Lite) using Gemma.
 
 <p align="center">
   <img src="./images/image1.jpg" width="32%">
@@ -12,8 +12,17 @@ An offline-first Kotlin Multiplatform (KMP) application suite for Investec Priva
 
 ## 🚀 Key Features
 
+- **📊 Financial Insights & Analytics Visualizations**:
+  - Interactive financial analytics dashboard ([AnalyticsScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/analytics/AnalyticsScreen.kt)) featuring custom Jetpack Compose Canvas charts:
+    - **Asset Allocation Donut Chart**: Account liquidity distribution with real-time percentages and legend breakdown.
+    - **Income vs. Expense Cash Flow Bar Chart**: Grouped bar comparison of total inflows (Credits) vs. outflows (Debits) with savings rate metrics.
+    - **Spending Category Breakdown**: Visual progress bars categorizing expenses into *Retail & Groceries*, *Food & Dining*, *Bills & Utilities*, *Transfers*, and *Income & Deposits*.
+    - **Daily Cash Stream Trend Chart**: Smooth Bezier area chart tracking net cash stream fluctuations over time.
+    - **Top Merchant Outflow Rankings**: Ranked expense breakdown by merchant frequency and volume.
+    - **Account Selector Filter**: Easily toggle analytics between *All Accounts* or individual linked accounts.
 - **🌐 Kotlin Multiplatform (KMP) Architecture**:
-  - Centralized shared data layer (`shared/`) providing unified Room DB caching, API client, models, and repositories for Android, Wear OS, and iOS targets.
+  - Centralized shared data layer (`shared/`) providing unified Room DB caching, API client, models, cross-platform timestamp resolution (`getCurrentTimeMillis()`), and repositories for Android, Wear OS, and iOS targets.
+  - Fully compatible with Android Gradle Plugin (AGP) 9.0+ built-in Kotlin compilation with strict zero-warning enforcement (`allWarningsAsErrors = true`).
 - **⌚ Wear OS Smartwatch App & Watch Tile**:
   - Native Wear OS UI built with Wear Compose featuring account balance viewing, transaction history, and custom connection settings.
   - Quick-glance Wear OS Watch Tile ([BankTileService.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/wear/src/main/java/com/example/tile/BankTileService.kt)).
@@ -41,13 +50,15 @@ An offline-first Kotlin Multiplatform (KMP) application suite for Investec Priva
 The codebase is organized into key modules:
 
 - **`shared/`**: KMP Shared Core Module
-  - [InvestecApiService.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/api/InvestecApiService.kt) - Ktor/Retrofit API client configuration and service definitions for the Investec OpenAPI.
+  - [InvestecApiClient.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/api/InvestecApiClient.kt) - Ktor/Retrofit API client configuration and service definitions for the Investec OpenAPI.
   - [BankDatabase.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/local/BankDatabase.kt) - Multiplatform Room Database configuration & DAOs.
-  - [BankRepository.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/repository/BankRepository.kt) - Data synchronization, database updates, credential accessors, and payments.
+  - [BankRepository.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/repository/BankRepository.kt) - Data synchronization, real-time timestamping, database updates, credential accessors, and payments.
+  - [PlatformUtils.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/commonMain/kotlin/com/example/data/repository/PlatformUtils.kt) - Cross-platform expectation declarations (sync date ranges, `getCurrentTimeMillis()`).
   - [WearSettingsSyncHelper.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/shared/src/androidMain/kotlin/com/example/data/sync/WearSettingsSyncHelper.kt) - Syncs settings & credentials with Wear OS devices.
 - **`app/`**: Handheld Android Application
-  - [MainActivity.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/MainActivity.kt) - Entry Activity handling biometric authentication, state management, widget alarm scheduling, and app navigation.
+  - [MainActivity.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/MainActivity.kt) - Entry Activity handling biometric authentication, NavigationSuiteScaffold routing, widget alarm scheduling, and app navigation.
   - [DashboardScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/dashboard/DashboardScreen.kt) - Main dashboard UI including profiles, account cards, transaction history, and settings.
+  - [AnalyticsScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/analytics/AnalyticsScreen.kt) & [AnalyticsViewModel.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/analytics/AnalyticsViewModel.kt) - Financial insights dashboard and interactive Compose Canvas charts.
   - [ChatScreen.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatScreen.kt) & [ChatViewModel.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/ui/chat/ChatViewModel.kt) - AI Assistant chat UI and LiteRT engine lifecycle management.
   - [BankWidgetProvider.kt](file:///Users/nickc/AndroidStudioProjects/InvestecBankingWidget/app/src/main/java/com/example/receiver/BankWidgetProvider.kt) - Jetpack Glance Widget provider, biometric lock evaluation, and session expiry checks.
 - **`wear/`**: Wear OS Smartwatch Application
@@ -63,7 +74,7 @@ The codebase is organized into key modules:
 ## ⚙️ Getting Started
 
 ### 1. Prerequisites
-- **Android Studio** (Koala or newer recommended).
+- **Android Studio** (Ladybug / Koala or newer recommended).
 - **Xcode** (15+ for running the iOS target).
 - **Android SDK 35/36** target compatibility.
 - An emulator or physical device supporting **Biometric Authentication**.
@@ -98,7 +109,7 @@ To connect to your live Investec accounts:
 The project is integrated with:
 - **Compose UI Tests** and **Robolectric** for local behavior verification.
 - **Roborazzi** for screenshot testing.
-- To run unit and viewmodel tests:
+- To run unit and viewmodel tests across modules:
   ```bash
   ./gradlew test
   ```
@@ -109,9 +120,12 @@ The project is integrated with:
 
 - [x] **Android App & Jetpack Glance Widget**
 - [x] **Kotlin Multiplatform (KMP) Shared Data Core**
+- [x] **Financial Analytics & Compose Canvas Charts**
 - [x] **Wear OS Smartwatch App & Watch Tile**
 - [x] **iOS Native SwiftUI Application**
-- [] ** iOS Chat Implemetation
+- [ ] **iOS Chat Implementation**
+
+---
 
 ## PS
 
