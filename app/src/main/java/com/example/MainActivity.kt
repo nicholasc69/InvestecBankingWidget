@@ -39,6 +39,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PieChart
+import com.example.ui.analytics.AnalyticsScreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -165,6 +167,10 @@ class MainActivity : FragmentActivity() {
                         when (currentDestination) {
                             ChatNavDestination.HOME -> DashboardScreen(
                                 viewModel = viewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            ChatNavDestination.ANALYTICS -> AnalyticsScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
 
@@ -420,5 +426,6 @@ enum class ChatNavDestination(
     val iconVector: ImageVector? = null,
 ) {
     HOME("Home", iconVector = Icons.Filled.Home),
+    ANALYTICS("Analytics", iconVector = Icons.Filled.PieChart),
     CHAT("Chat", iconVector = Icons.AutoMirrored.Filled.Chat)
 }
