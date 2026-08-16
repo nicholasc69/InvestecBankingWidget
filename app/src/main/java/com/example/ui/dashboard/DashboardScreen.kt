@@ -937,8 +937,12 @@ fun BalanceDetailedMetricsCard(
             HorizontalDivider(color = Color(0xFFE1E2E9))
             Spacer(modifier = Modifier.height(12.dp))
 
-            val timeStr = SimpleDateFormat("HH:mm:ss, dd MMM yyyy", LocalLocale.current.platformLocale)
-                .format(Date(account.lastUpdated))
+            val timeStr = if (account.lastUpdated > 0L) {
+                SimpleDateFormat("HH:mm:ss, dd MMM yyyy", java.util.Locale.getDefault())
+                    .format(Date(account.lastUpdated))
+            } else {
+                "Just now"
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

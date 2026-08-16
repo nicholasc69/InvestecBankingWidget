@@ -22,3 +22,6 @@ actual fun getSyncDateRange(): Pair<String, String> {
     val fromDateStr = formatter.stringFromDate(threeMonthsAgo)
     return Pair(fromDateStr, toDateStr)
 }
+
+actual fun getCurrentTimeMillis(): Long = (NSDate().timeIntervalSince1990 * 1000).toLong()
+

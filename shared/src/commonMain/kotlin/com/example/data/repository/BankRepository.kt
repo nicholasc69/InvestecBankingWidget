@@ -219,7 +219,7 @@ class BankRepository(
                         currentBalance = currentBalance,
                         availableBalance = availableBalance,
                         currency = currency,
-                        lastUpdated = 0L // handled platform independently
+                        lastUpdated = getCurrentTimeMillis()
                     )
                 }
             }.awaitAll()

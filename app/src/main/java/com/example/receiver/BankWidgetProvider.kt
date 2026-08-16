@@ -235,7 +235,7 @@ fun BankWidgetContent(
                         )
                     )
                     Spacer(modifier = GlanceModifier.defaultWeight())
-                    val syncTime = if (account != null) {
+                    val syncTime = if (account != null && account.lastUpdated > 0L) {
                         SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(Date(account.lastUpdated))
                     } else {
                         "--:--"

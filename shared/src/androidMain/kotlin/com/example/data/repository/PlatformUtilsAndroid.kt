@@ -8,3 +8,5 @@ actual fun getSyncDateRange(): Pair<String, String> {
     val fromDateStr = LocalDate.now().minusMonths(3).format(DateTimeFormatter.ISO_LOCAL_DATE)
     return Pair(fromDateStr, toDateStr)
 }
+
+actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
