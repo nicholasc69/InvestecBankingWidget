@@ -937,8 +937,9 @@ fun BalanceDetailedMetricsCard(
             HorizontalDivider(color = Color(0xFFE1E2E9))
             Spacer(modifier = Modifier.height(12.dp))
 
+            val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
             val timeStr = if (account.lastUpdated > 0L) {
-                SimpleDateFormat("HH:mm:ss, dd MMM yyyy", java.util.Locale.getDefault())
+                SimpleDateFormat("HH:mm:ss, dd MMM yyyy", locale)
                     .format(Date(account.lastUpdated))
             } else {
                 "Just now"

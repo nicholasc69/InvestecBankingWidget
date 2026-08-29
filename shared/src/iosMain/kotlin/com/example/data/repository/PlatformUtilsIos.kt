@@ -23,5 +23,5 @@ actual fun getSyncDateRange(): Pair<String, String> {
     return Pair(fromDateStr, toDateStr)
 }
 
-actual fun getCurrentTimeMillis(): Long = (NSDate().timeIntervalSince1990 * 1000).toLong()
+actual fun getCurrentTimeMillis(): Long = ((NSDate().timeIntervalSinceReferenceDate + 978307200.0) * 1000).toLong()
 

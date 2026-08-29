@@ -4,59 +4,94 @@ import kotlinx.cinterop.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import platform.CoreFoundation.*
 import platform.Foundation.*
 import platform.Security.*
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 private object IOSKeychain {
     private const val SERVICE_NAME = "com.example.investec.keychain"
 
     fun save(key: String, value: String): Boolean {
-        val data = (value as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: return false
+        val valNs = NSString.create(string = value)
+        val data = valNs.dataUsingEncoding(NSUTF8StringEncoding) ?: return false
         delete(key)
 
-        val query = NSMutableDictionary().apply {
-            setObject(kSecClassGenericPassword, kSecClass)
-            setObject(SERVICE_NAME, kSecAttrService)
-            setObject(key, kSecAttrAccount)
-            setObject(data, kSecValueData)
-            setObject(kSecAttrAccessibleAfterFirstUnlock, kSecAttrAccessible)
-        }
+        val query = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, null, null)
+        val serviceNs = NSString.create(string = SERVICE_NAME)
+        val keyNs = NSString.create(string = key)
+        val serviceRef = CFBridgingRetain(serviceNs)
+        val keyRef = CFBridgingRetain(keyNs)
+        val dataRef = CFBridgingRetain(data)
 
-        val status = SecItemAdd(query, null)
-        return status == errSecSuccess
+        try {
+            CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword)
+            CFDictionarySetValue(query, kSecAttrService, serviceRef)
+            CFDictionarySetValue(query, kSecAttrAccount, keyRef)
+            CFDictionarySetValue(query, kSecValueData, dataRef)
+            CFDictionarySetValue(query, kSecAttrAccessible, kSecAttrAccessibleAfterFirstUnlock)
+
+            val status = SecItemAdd(query, null)
+            return status == errSecSuccess
+        } finally {
+            CFRelease(serviceRef)
+            CFRelease(keyRef)
+            CFRelease(dataRef)
+            CFRelease(query)
+        }
     }
 
     fun get(key: String): String? {
-        val query = NSMutableDictionary().apply {
-            setObject(kSecClassGenericPassword, kSecClass)
-            setObject(SERVICE_NAME, kSecAttrService)
-            setObject(key, kSecAttrAccount)
-            setObject(kCFBooleanTrue, kSecReturnData)
-            setObject(kSecMatchLimitOne, kSecMatchLimit)
-        }
+        val query = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, null, null)
+        val serviceNs = NSString.create(string = SERVICE_NAME)
+        val keyNs = NSString.create(string = key)
+        val serviceRef = CFBridgingRetain(serviceNs)
+        val keyRef = CFBridgingRetain(keyNs)
 
-        return memScoped {
-            val dataTypeRef = alloc<CFTypeRefVar>()
-            val status = SecItemCopyMatching(query, dataTypeRef.ptr)
-            if (status == errSecSuccess) {
-                val data = CFBridgingRelease(dataTypeRef.value) as? NSData
-                data?.let {
-                    NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString()
+        try {
+            CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword)
+            CFDictionarySetValue(query, kSecAttrService, serviceRef)
+            CFDictionarySetValue(query, kSecAttrAccount, keyRef)
+            CFDictionarySetValue(query, kSecReturnData, kCFBooleanTrue)
+            CFDictionarySetValue(query, kSecMatchLimit, kSecMatchLimitOne)
+
+            return memScoped {
+                val dataTypeRef = alloc<COpaquePointerVar>()
+                val status = SecItemCopyMatching(query, dataTypeRef.ptr)
+                if (status == errSecSuccess && dataTypeRef.value != null) {
+                    val data = CFBridgingRelease(dataTypeRef.value) as? NSData
+                    data?.let {
+                        NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString()
+                    }
+                } else {
+                    null
                 }
-            } else {
-                null
             }
+        } finally {
+            CFRelease(serviceRef)
+            CFRelease(keyRef)
+            CFRelease(query)
         }
     }
 
     fun delete(key: String) {
-        val query = NSMutableDictionary().apply {
-            setObject(kSecClassGenericPassword, kSecClass)
-            setObject(SERVICE_NAME, kSecAttrService)
-            setObject(key, kSecAttrAccount)
+        val query = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, null, null)
+        val serviceNs = NSString.create(string = SERVICE_NAME)
+        val keyNs = NSString.create(string = key)
+        val serviceRef = CFBridgingRetain(serviceNs)
+        val keyRef = CFBridgingRetain(keyNs)
+
+        try {
+            CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword)
+            CFDictionarySetValue(query, kSecAttrService, serviceRef)
+            CFDictionarySetValue(query, kSecAttrAccount, keyRef)
+
+            SecItemDelete(query)
+        } finally {
+            CFRelease(serviceRef)
+            CFRelease(keyRef)
+            CFRelease(query)
         }
-        SecItemDelete(query)
     }
 }
 

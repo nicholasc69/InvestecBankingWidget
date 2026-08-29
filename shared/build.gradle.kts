@@ -16,14 +16,21 @@ kotlin {
         }
     }
     
+    val isXcodeInstalled = providers.exec {
+        commandLine("xcodebuild", "-version")
+        isIgnoreExitValue = true
+    }.result.get().exitValue == 0
+
     listOf(
         iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach {
-        it.binaries.framework {
-            baseName = "shared"
-            isStatic = true
+        if (isXcodeInstalled) {
+            it.binaries.framework {
+                baseName = "shared"
+                isStatic = true
+            }
         }
     }
     
