@@ -29,9 +29,9 @@ class BankRepository(
         const val BASE_URL_SANDBOX = "https://openapisandbox.investec.com"
         const val BASE_URL_PRODUCTION = "https://openapi.investec.com"
 
-        const val DEFAULT_SANDBOX_CLIENT_ID = "yAxzQRFX97vOcyQAwluEU6H6ePxMA5eY"
-        const val DEFAULT_SANDBOX_CLIENT_SECRET = "4dY0PjEYqoBrZ99r"
-        const val DEFAULT_SANDBOX_API_KEY = "eUF4elFSRlg5N3ZPY3lRQXdsdUVVNkg2ZVB4TUE1ZVk6YVc1MlpYTjBaV010ZW1FdGNHSXRZV05qYjNWdWRITXRjMkZ1WkdKdmVBPT0="
+        const val DEFAULT_SANDBOX_CLIENT_ID = ""
+        const val DEFAULT_SANDBOX_CLIENT_SECRET = ""
+        const val DEFAULT_SANDBOX_API_KEY = ""
 
         private const val USE_SANDBOX = "use_sandbox"
     }
@@ -84,13 +84,13 @@ class BankRepository(
     // Resolves current active credentials based on configuration
     suspend fun getActiveCredentials(): Triple<String, String, String> {
         return if (useSandbox()) {
-            val defaultCid = settings.getString("default_sandbox_client_id", DEFAULT_SANDBOX_CLIENT_ID)
-            val defaultSec = settings.getString("default_sandbox_client_secret", DEFAULT_SANDBOX_CLIENT_SECRET)
-            val defaultKey = settings.getString("default_sandbox_api_key", DEFAULT_SANDBOX_API_KEY)
+            val defaultCid = settings.getString("default_sandbox_client_id", "")
+            val defaultSec = settings.getString("default_sandbox_client_secret", "")
+            val defaultKey = settings.getString("default_sandbox_api_key", "")
 
-            val cid = defaultCid.ifBlank { DEFAULT_SANDBOX_CLIENT_ID }
-            val sec = defaultSec.ifBlank { DEFAULT_SANDBOX_CLIENT_SECRET }
-            val key = defaultKey.ifBlank { DEFAULT_SANDBOX_API_KEY }
+            val cid = defaultCid.ifBlank { getClientId() }
+            val sec = defaultSec.ifBlank { getClientSecret() }
+            val key = defaultKey.ifBlank { getApiKey() }
             Triple(cid, sec, key)
         } else {
             Triple(getClientId(), getClientSecret(), getApiKey())

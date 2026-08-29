@@ -21,7 +21,8 @@ class PhoneSettingsListenerService : WearableListenerService() {
     override fun onMessageReceived(messageEvent: MessageEvent) {
         super.onMessageReceived(messageEvent)
         if (messageEvent.path == WearSettingsSyncHelper.REQUEST_SETTINGS_PATH) {
-            Log.d(TAG, "Received request for settings from Wear device. Pushing settings to Wear...")
+            val sourceNode = messageEvent.sourceNodeId
+            Log.d(TAG, "Received request for settings from Wear device (node: $sourceNode). Pushing settings to Wear...")
             WearSettingsSyncHelper.pushSettingsToWear(applicationContext, settings)
         }
     }

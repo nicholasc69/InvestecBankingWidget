@@ -87,19 +87,27 @@ class ModelDownloadManager @Inject constructor(
             return localFile
         }
 
-        // 2. Check fallback ADB path /data/local/tmp/
-        val adbFile = File("/data/local/tmp/${model.fileName}")
-        if (adbFile.exists() && adbFile.length() > 0) {
-            return adbFile
-        }
+        // 2. Check fallback ADB path /data/local/tmp/ ONLY in DEBUG builds
+        if (com.example.BuildConfig.DEBUG) {
+            val adbFile = File("/data/local/tmp/${model.fileName}")
+            if (adbFile.exists() && adbFile.length() > 0) {
+                return adbFile
+            }
 
-        // 3. Case insensitive search in /data/local/tmp/
-        val adbFileLower = File("/data/local/tmp/${model.fileName.lowercase()}")
-        if (adbFileLower.exists() && adbFileLower.length() > 0) {
-            return adbFileLower
+            val adbFileLower = File("/data/local/tmp/${model.fileName.lowercase()}")
+            if (adbFileLower.exists() && adbFileLower.length() > 0) {
+                return adbFileLower
+            }
         }
 
         return null
+    }
+
+    private fun isValidDownloadUrl(url: String): Boolean {
+        if (!url.startsWith("https://", ignoreCase = true)) return false
+        val uri = android.net.Uri.parse(url)
+        val host = uri.host?.lowercase() ?: return false
+        return host == "huggingface.co" || host.endsWith(".huggingface.co") || host == "storage.googleapis.com"
     }
 
     fun getSelectedModel(): ModelInfo {
@@ -121,6 +129,13 @@ class ModelDownloadManager @Inject constructor(
         if (activeJobs.containsKey(model.id)) return
 
         val targetUrl = customUrl?.takeIf { it.isNotBlank() } ?: model.downloadUrl
+        if (!isValidDownloadUrl(targetUrl)) {
+            val errorMsg = "Download rejected: Invalid or insecure URL '$targetUrl'. Download URLs must use HTTPS from trusted model hosts."
+            Log.e(TAG, errorMsg)
+            updateModelState(model.id, DownloadState.Error(errorMsg))
+            return
+        }
+
         Log.d(TAG, "Starting download for ${model.name} from $targetUrl")
 
         val job = scope.launch {

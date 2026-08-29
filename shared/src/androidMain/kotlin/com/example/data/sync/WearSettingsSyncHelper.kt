@@ -27,11 +27,25 @@ object WearSettingsSyncHelper {
      */
     fun pushSettingsToWear(context: Context, settings: KeyValueSettings) {
         try {
+            val useSandbox = settings.getBoolean(KEY_USE_SANDBOX, true)
+            var clientId = settings.getString(KEY_CLIENT_ID, "")
+            var clientSecret = settings.getString(KEY_CLIENT_SECRET, "")
+            var apiKey = settings.getString(KEY_API_KEY, "")
+
+            if (useSandbox && (clientId.isBlank() || clientSecret.isBlank() || apiKey.isBlank())) {
+                val defaultCid = settings.getString("default_sandbox_client_id", "")
+                val defaultSec = settings.getString("default_sandbox_client_secret", "")
+                val defaultKey = settings.getString("default_sandbox_api_key", "")
+                if (clientId.isBlank()) clientId = defaultCid
+                if (clientSecret.isBlank()) clientSecret = defaultSec
+                if (apiKey.isBlank()) apiKey = defaultKey
+            }
+
             val request = PutDataMapRequest.create(SETTINGS_PATH).apply {
-                dataMap.putBoolean(KEY_USE_SANDBOX, settings.getBoolean(KEY_USE_SANDBOX, true))
-                dataMap.putString(KEY_CLIENT_ID, settings.getString(KEY_CLIENT_ID, ""))
-                dataMap.putString(KEY_CLIENT_SECRET, settings.getString(KEY_CLIENT_SECRET, ""))
-                dataMap.putString(KEY_API_KEY, settings.getString(KEY_API_KEY, ""))
+                dataMap.putBoolean(KEY_USE_SANDBOX, useSandbox)
+                dataMap.putString(KEY_CLIENT_ID, clientId)
+                dataMap.putString(KEY_CLIENT_SECRET, clientSecret)
+                dataMap.putString(KEY_API_KEY, apiKey)
                 dataMap.putString(KEY_SELECTED_PROFILE_ID, settings.getString(KEY_SELECTED_PROFILE_ID, ""))
                 dataMap.putLong(KEY_TIMESTAMP, System.currentTimeMillis())
             }.asPutDataRequest().setUrgent()

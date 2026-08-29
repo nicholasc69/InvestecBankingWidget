@@ -42,15 +42,15 @@ class AndroidKeyValueSettings(
     override fun getString(key: String, defaultValue: String): String {
         if (key == "default_sandbox_client_id") {
             val buildConfigVal = com.example.BuildConfig.CLIENT_ID
-            return if (!buildConfigVal.isNullOrBlank()) buildConfigVal else BankRepository.DEFAULT_SANDBOX_CLIENT_ID
+            if (!buildConfigVal.isNullOrBlank()) return buildConfigVal
         }
         if (key == "default_sandbox_client_secret") {
             val buildConfigVal = com.example.BuildConfig.CLIENT_SECRET
-            return if (!buildConfigVal.isNullOrBlank()) buildConfigVal else BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET
+            if (!buildConfigVal.isNullOrBlank()) return buildConfigVal
         }
         if (key == "default_sandbox_api_key") {
             val buildConfigVal = com.example.BuildConfig.API_KEY
-            return if (!buildConfigVal.isNullOrBlank()) buildConfigVal else BankRepository.DEFAULT_SANDBOX_API_KEY
+            if (!buildConfigVal.isNullOrBlank()) return buildConfigVal
         }
         return encryptedPrefs.getString(key, defaultValue) ?: defaultValue
     }

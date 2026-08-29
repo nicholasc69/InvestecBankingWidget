@@ -113,7 +113,7 @@ class TransactionsViewModel @Inject constructor(
             accounts = accounts,
             selectedAccountId = selectedId,
             selectedAccount = selectedAcc,
-            transactions = filteredTxs,
+            transactions = filteredTxs.take(10),
             filter = activeFilter,
             searchQuery = query,
             totalIncome = income,

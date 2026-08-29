@@ -230,4 +230,34 @@ class TransactionsViewModelTest {
         assertTrue(state.hasCredentials)
         assertEquals("my_s...2345", state.clientIdMasked)
     }
+
+    @Test
+    fun testTransactionsLimitedToTen() = runTest {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val extraTxs = (3..15).map { i ->
+            TransactionEntity(
+                id = i.toLong(),
+                accountId = "acc_1",
+                type = "DEBIT",
+                transactionType = "Purchase",
+                status = "POSTED",
+                description = "Store $i",
+                amount = 10.0 * i,
+                runningBalance = 1000.0,
+                postingDate = "2026-08-02",
+                transactionDate = "2026-08-02",
+                uuid = "tx-uuid-$i"
+            )
+        }
+        transactionDao.insertTransactions(extraTxs)
+
+        val viewModel = TransactionsViewModel(repository, settings, context)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(10, state.transactions.size)
+    }
 }

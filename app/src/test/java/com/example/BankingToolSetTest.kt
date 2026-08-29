@@ -246,9 +246,9 @@ class BankingToolSetTest {
         assertTrue(repository.useSandbox())
 
         val (cid, sec, key) = repository.getActiveCredentials()
-        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_ID, cid)
-        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET, sec)
-        assertEquals(BankRepository.DEFAULT_SANDBOX_API_KEY, key)
+        assertEquals(com.example.BuildConfig.CLIENT_ID.orEmpty(), cid)
+        assertEquals(com.example.BuildConfig.CLIENT_SECRET.orEmpty(), sec)
+        assertEquals(com.example.BuildConfig.API_KEY.orEmpty(), key)
 
         repository.setUseSandbox(false)
         repository.setClientId("prod_cid")
@@ -265,8 +265,8 @@ class BankingToolSetTest {
         assertTrue(repository.useSandbox())
 
         val (sCid, sSec, sKey) = repository.getActiveCredentials()
-        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_ID, sCid)
-        assertEquals(BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET, sSec)
-        assertEquals(BankRepository.DEFAULT_SANDBOX_API_KEY, sKey)
+        assertEquals(com.example.BuildConfig.CLIENT_ID.orEmpty(), sCid)
+        assertEquals(com.example.BuildConfig.CLIENT_SECRET.orEmpty(), sSec)
+        assertEquals(com.example.BuildConfig.API_KEY.orEmpty(), sKey)
     }
 }
