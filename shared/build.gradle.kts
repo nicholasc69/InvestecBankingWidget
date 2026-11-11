@@ -16,10 +16,12 @@ kotlin {
         }
     }
     
-    val isXcodeInstalled = providers.exec {
-        commandLine("xcodebuild", "-version")
-        isIgnoreExitValue = true
-    }.result.get().exitValue == 0
+    val isXcodeInstalled = System.getProperty("os.name").lowercase().contains("mac") && runCatching {
+        providers.exec {
+            commandLine("xcodebuild", "-version")
+            isIgnoreExitValue = true
+        }.result.get().exitValue == 0
+    }.getOrDefault(false)
 
     listOf(
         iosX64(),

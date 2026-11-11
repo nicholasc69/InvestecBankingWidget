@@ -3,6 +3,7 @@ package com.example.data.sync
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.example.data.repository.BankRepository
 import com.example.data.repository.KeyValueSettings
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
@@ -33,9 +34,9 @@ object WearSettingsSyncHelper {
             var apiKey = settings.getString(KEY_API_KEY, "")
 
             if (useSandbox && (clientId.isBlank() || clientSecret.isBlank() || apiKey.isBlank())) {
-                val defaultCid = settings.getString("default_sandbox_client_id", "")
-                val defaultSec = settings.getString("default_sandbox_client_secret", "")
-                val defaultKey = settings.getString("default_sandbox_api_key", "")
+                val defaultCid = settings.getString("default_sandbox_client_id", BankRepository.DEFAULT_SANDBOX_CLIENT_ID)
+                val defaultSec = settings.getString("default_sandbox_client_secret", BankRepository.DEFAULT_SANDBOX_CLIENT_SECRET)
+                val defaultKey = settings.getString("default_sandbox_api_key", BankRepository.DEFAULT_SANDBOX_API_KEY)
                 if (clientId.isBlank()) clientId = defaultCid
                 if (clientSecret.isBlank()) clientSecret = defaultSec
                 if (apiKey.isBlank()) apiKey = defaultKey
